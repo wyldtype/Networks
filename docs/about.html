@@ -11,7 +11,7 @@
 
 
 
-<title>About This Website</title>
+<title>Scraps</title>
 
 <script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -245,6 +245,18 @@ $(document).ready(function () {
         <li>
   <a href="index.html">Home</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Data Cleaning
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="data_cleaning.html">Import and clean count data</a>
+    </li>
+  </ul>
+</li>
 <li>
   <a href="about.html">About</a>
 </li>
@@ -260,12 +272,523 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">About This Website</h1>
+<h1 class="title toc-ignore">Scraps</h1>
 
 </div>
 
 
-<p>More about this website.</p>
+<p>Code scraps from plasticity involving TFdel genotypes to be used in
+networks</p>
+<p>Plotting functions:</p>
+<pre class="r"><code># plots WT vs TFdel in both species
+plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
+                                       .info1, .info2, .info3, .info4,
+                                       .name1 = &quot;S. cerevisiae WT&quot;,
+                                       .name2 = &quot;S. paradoxus WT&quot;,
+                                       .name3 = &quot;S. cerevisiae TFdel&quot;,
+                                       .name4 = &quot;S. paradoxus TFdel&quot;,
+                                       .color1 = &quot;orange1&quot;,
+                                       .color2 = &quot;blue2&quot;,
+                                       .color3 = &quot;orange4&quot;,
+                                       .color4 = &quot;blue4&quot;,
+                                       .normalization = c(&quot;none&quot;, &quot;log2&quot;, &quot;scale&quot;, &quot;centered log2&quot;),
+                                       .show_points_wt = TRUE,
+                                       .show_points_tfdel = TRUE,
+                                       .show_lines_wt = TRUE,
+                                       .show_lines_tfdel = FALSE,
+                                       .show_wt = TRUE,
+                                       .show_tfdel = TRUE,
+                                       .show_confidence_intervals = TRUE,
+                                       .plotlims = NULL) {
+  if (.normalization == &quot;none&quot;) {
+    norm_func &lt;- identity
+    ylabel &lt;- &quot;Expression&quot;
+  }
+  if (.normalization == &quot;log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1)}
+    ylabel &lt;- &quot;Expression (log2)&quot;
+  }
+  if (.normalization == &quot;scale&quot;) {
+    norm_func &lt;- \(x) {t(scale(t(x)))}
+    ylabel &lt;- &quot;Expression (centered and scaled)&quot;
+  }
+  if (.normalization == &quot;centered log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1) - rowMeans(log2(x + 1), na.rm = TRUE)}
+    ylabel &lt;- &quot;Expression (centered log2)&quot;
+  }
+  if (!setequal(unique(.info1$experiment), unique(.info2$experiment))) {
+    stop(&quot;sample info dataframes do not contain same set of experiments\n&quot;)
+  }
+  info1 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info1$time_point_str,
+                  genotype = .info1$genotype,
+                  well_flask_ID = .info1$well_flask_ID)
+  info2 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info2$time_point_str,
+                  genotype = .info2$genotype,
+                  well_flask_ID = .info2$well_flask_ID)
+  info3 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info3$time_point_str,
+                  genotype = .info3$genotype,
+                  well_flask_ID = .info3$well_flask_ID)
+  info4 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info4$time_point_str,
+                  genotype = .info4$genotype,
+                  well_flask_ID = .info4$well_flask_ID)
+  expr1 &lt;- norm_func(.cts1) |&gt; t()
+  expr2 &lt;- norm_func(.cts2) |&gt; t()
+  expr3 &lt;- norm_func(.cts3) |&gt; t()
+  expr4 &lt;- norm_func(.cts4) |&gt; t()
+  colnames(expr1) &lt;- rownames(.cts1)
+  colnames(expr2) &lt;- rownames(.cts2)
+  colnames(expr3) &lt;- rownames(.cts3)
+  colnames(expr4) &lt;- rownames(.cts4)
+  gdf1 &lt;- bind_cols(expr1, info1) |&gt; 
+    pivot_longer(cols = colnames(expr1), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf1$group_id &lt;- &quot;1&quot;
+  gdf2 &lt;- bind_cols(expr2, info2) |&gt; 
+    pivot_longer(cols = colnames(expr2), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf2$group_id &lt;- &quot;2&quot;
+  gdf3 &lt;- bind_cols(expr3, info3) |&gt; 
+    pivot_longer(cols = colnames(expr3), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf3$group_id &lt;- &quot;3&quot;
+  gdf4 &lt;- bind_cols(expr4, info4) |&gt; 
+    pivot_longer(cols = colnames(expr4), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf4$group_id &lt;- &quot;4&quot;
+  # converting each gene&#39;s expression to its mean expression between replicates
+  gdf &lt;- bind_rows(gdf1, gdf2, gdf3, gdf4) |&gt; 
+    group_by(group_id, time_point_str, well_flask_ID, genotype) |&gt; 
+    summarise(expr = mean(expr, na.rm = TRUE)) |&gt; ungroup()
+  plotlimdf &lt;- gdf |&gt; group_by(time_point_str, genotype, group_id) |&gt;
+    summarise(mean_expr = mean(expr, na.rm = TRUE),
+              sd_expr = sd(expr, na.rm = TRUE)) 
+  max_avg &lt;- plotlimdf |&gt; select(mean_expr) |&gt;
+    pull() |&gt; max(na.rm = TRUE)
+  min_avg &lt;- plotlimdf |&gt; select(mean_expr) |&gt;
+    pull() |&gt; min(na.rm = TRUE)
+  buffer &lt;- 0.25
+  max_avg &lt;- max_avg + buffer
+  min_avg &lt;- min_avg - buffer
+  # min/maxs when plotting points as well as averages:
+  max_expr &lt;- max(gdf$expr, na.rm = TRUE)
+  min_expr &lt;- min(gdf$expr, na.rm = TRUE)
+  # setting plotlims if they haven&#39;t been manually set
+  if (is.null(.plotlims)) {
+    if (!(.show_points_wt | .show_points_tfdel)) {
+      .plotlims &lt;- c(min_avg, max_avg)
+    }
+    if (.show_points_wt | .show_points_tfdel) {
+      .plotlims &lt;- c(min_expr - 0.1, max_expr + 0.1) # buffer b/c TFdel points are very large
+    }
+  }
+  plotdf &lt;- gdf
+  # plotting
+  p &lt;- ggplot() + 
+    theme_classic() +
+    scale_color_discrete(type = c(.color1, .color2, .color3, .color4), 
+                         labels = c(.name1, .name2, .name3, .name4),
+                         limits = c(&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;)) +
+    theme(legend.title = element_blank(),
+          legend.position = &quot;none&quot;) +
+    ylab(&quot;&quot;) +
+    xlab(&quot;&quot;) +
+    ylim(.plotlims)
+  if (.show_points_wt &amp; .show_wt) {
+    p &lt;- p + geom_jitter(data = filter(plotdf, genotype == &quot;WT&quot;),
+                         aes(x = time_point_str, y = expr, color = group_id), 
+                         size = 0.1, alpha = 0.5, shape = &quot;.&quot;) 
+  }
+  if (.show_lines_wt &amp; .show_wt) {
+    # lines trace average expr at each timepoint/experiment for each group
+    avgexpr1 &lt;- plotdf %&gt;% filter(group_id == 1) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                          sd_expr = sd(expr, na.rm = TRUE))
+    avgexpr2 &lt;- plotdf %&gt;% filter(group_id == 2) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                          sd_expr = sd(expr, na.rm = TRUE))
+    # adding line segments (the =!! is from rlang and forces the mapping to not be lazily evaluated at the time of plotting):
+    p &lt;- p +
+      geom_line(data = avgexpr1, aes(x = time_point_str, y = mean_expr, group = group_id), color = .color1, linewidth = 1, linetype = &quot;solid&quot;) +
+      geom_line(data = avgexpr2, aes(x = time_point_str, y = mean_expr, group = group_id), color = .color2, linewidth = 1, linetype = &quot;solid&quot;)
+    if (.show_confidence_intervals) {
+      # calculating 95% confidence in the mean
+      nGenes &lt;- nrow(.cts1)
+      avgexpr1$CI &lt;- 1.96*(avgexpr1$sd_expr/sqrt(nGenes))
+      avgexpr2$CI &lt;- 1.96*(avgexpr2$sd_expr/sqrt(nGenes))
+      p &lt;- p + 
+        geom_ribbon(data = avgexpr1, aes(x = time_point_str, ymin = pmax(mean_expr - CI, .plotlims[1]), ymax = pmin(mean_expr + CI, .plotlims[2])),
+                    fill = .color1, alpha = 0.3) +
+        geom_ribbon(data = avgexpr2, aes(x = time_point_str, ymin = pmax(mean_expr - CI, .plotlims[1]), ymax = pmin(mean_expr + CI, .plotlims[2])),
+                    fill = .color2, alpha = 0.3)
+    }
+    if (.show_points_tfdel &amp; .show_tfdel) {
+      p &lt;- p + geom_jitter(data = filter(plotdf, genotype != &quot;WT&quot;),
+                           aes(x = time_point_str, y = expr, color = group_id),
+                           shape = &quot;+&quot;, size = 6, width = 0.1, height = 0) # height = 0 prevents vertical jitter
+    }
+    if (.show_lines_tfdel &amp; .show_tfdel) {
+      # lines trace average expr at each timepoint/experiment for each group
+      avgexpr3 &lt;- plotdf %&gt;% filter(group_id == 3) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                                      sd_expr = sd(expr, na.rm = TRUE))
+      avgexpr4 &lt;- plotdf %&gt;% filter(group_id == 4) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                                      sd_expr = sd(expr, na.rm = TRUE))
+      # adding line segments (the =!! is from rlang and forces the mapping to not be lazily evaluated at the time of plotting):
+      p &lt;- p +
+        geom_line(data = avgexpr3, aes(x = time_point_str, y = mean_expr, group = group_id), color = .color3, linewidth = 1, linetype = &quot;dashed&quot;) +
+        geom_line(data = avgexpr4, aes(x = time_point_str, y = mean_expr, group = group_id), color = .color4, linewidth = 1, linetype = &quot;dashed&quot;)
+      if (.show_confidence_intervals) {
+        # calculating 95% confidence in the mean
+        nGenes &lt;- nrow(.cts1)
+        avgexpr3$CI &lt;- 1.96*(avgexpr3$sd_expr/sqrt(nGenes))
+        avgexpr4$CI &lt;- 1.96*(avgexpr4$sd_expr/sqrt(nGenes))
+        p &lt;- p + 
+          geom_ribbon(data = avgexpr3, aes(x = time_point_str, ymin = pmax(mean_expr - CI, .plotlims[1]), ymax = pmin(mean_expr + CI, .plotlims[2])),
+                      fill = .color1, alpha = 0.3) +
+          geom_ribbon(data = avgexpr4, aes(x = time_point_str, ymin = pmax(mean_expr - CI, .plotlims[1]), ymax = pmin(mean_expr + CI, .plotlims[2])),
+                      fill = .color2, alpha = 0.3)
+      }
+    }
+    return(p)
+  }
+}
+# # tests for plotExpressionProfileTFdel
+# TODO: ARG81 1-2 at TP1 has un-normalized TFdel replicates near the top of the WT pack,
+# but log2 has them somewhere in the middle
+# gene_idxs &lt;- gene_idxs &lt;- finaldf |&gt; filter(experiment == &quot;LowN&quot; &amp;
+#                                               group == &quot;dyn21&quot;) |&gt; 
+#   select(gene_name) |&gt; pull()
+# cer_wt_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;WT&quot; &amp; sample_info_tfdel_allele$allele == &quot;cer&quot;)
+# par_wt_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;WT&quot; &amp; sample_info_tfdel_allele$allele == &quot;par&quot;)
+# cer_tfdel_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;LEU3delete&quot; &amp; sample_info_tfdel_allele$allele == &quot;cer&quot;)
+# par_tfdel_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;LEU3delete&quot; &amp; sample_info_tfdel_allele$allele == &quot;par&quot;)
+# plotExpressionProfileTFdel(.cts1 = counts_tfdel_allele[gene_idxs, cer_wt_cols],
+#                            .cts2 = counts_tfdel_allele[gene_idxs, par_wt_cols],
+#                            .cts3 = counts_tfdel_allele[gene_idxs, cer_tfdel_cols],
+#                            .cts4 = counts_tfdel_allele[gene_idxs, par_tfdel_cols],
+#                            .info1 = sample_info_tfdel_allele[cer_wt_cols,],
+#                            .info2 = sample_info_tfdel_allele[par_wt_cols,],
+#                            .info3 = sample_info_tfdel_allele[cer_tfdel_cols,],
+#                            .info4 = sample_info_tfdel_allele[par_tfdel_cols,],
+#                            .normalization = &quot;log2&quot;,
+#                            .show_points_wt = TRUE,
+#                            .show_points_tfdel = TRUE,
+#                            .show_lines_tfdel = TRUE)
+
+# Plots each genotype as a separate line
+plotExpressionProfileTFdels &lt;- function(.cts,
+                                        .info,
+                                        .name1 = &quot;WT&quot;,
+                                        .name2 = &quot;TFdel&quot;,
+                                        .color1 = &quot;red&quot;,
+                                        .color2 = &quot;grey&quot;,
+                                        .normalization = c(&quot;none&quot;, &quot;log2&quot;, &quot;scale&quot;, &quot;centered log2&quot;),
+                                        .ylims = NULL,
+                                        .ylab = TRUE) {
+  if (.normalization == &quot;none&quot;) {
+    norm_func &lt;- identity
+    ylabel &lt;- &quot;Expression&quot;
+  }
+  if (.normalization == &quot;log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1)}
+    ylabel &lt;- &quot;Expression (log2)&quot;
+  }
+  if (.normalization == &quot;scale&quot;) {
+    norm_func &lt;- scale
+    ylabel &lt;- &quot;Expression (centered and scaled)&quot;
+  }
+  if (.normalization == &quot;centered log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1) - rowMeans(log2(x + 1), na.rm = TRUE)}
+    ylabel &lt;- &quot;Expression (centered log2)&quot;
+  }
+  if (!.ylab) {
+    ylabel &lt;- &quot;&quot;
+  }
+  gdf &lt;- bind_cols(tibble(sample_name = colnames(.cts)),
+                   t(.cts)) |&gt; 
+    left_join(.info, by = &quot;sample_name&quot;) |&gt; 
+    pivot_longer(cols = rownames(.cts), 
+                 names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  plotdf &lt;- gdf |&gt; group_by(genotype, gene_name) |&gt; 
+    reframe(expr = norm_func(expr),
+            time_point_str = time_point_str) |&gt;
+    ungroup() |&gt;
+    group_by(genotype, time_point_str) |&gt; 
+    summarise(mean_expr = mean(expr, na.rm = TRUE))
+  # plotting
+  p &lt;- ggplot(plotdf, aes(x = time_point_str, y = mean_expr)) +
+    geom_line(data = filter(plotdf, genotype != &quot;WT&quot;),
+              aes(group = genotype), color = .color2, alpha = 0.5) +
+    geom_line(data = filter(plotdf, genotype == &quot;WT&quot;),
+              aes(group = genotype), color = .color1,
+              linewidth = 1.5) +
+    theme_classic() +
+    ylab(ylabel) +
+    xlab(&quot;&quot;)
+  if (!is.null(.ylims)) {
+    p &lt;- p + ylim(.ylims)
+  }
+  return(p)
+}
+# Tests for plotExpressionProfileTFdels
+# test_gene_idxs &lt;- finaldf |&gt; filter(experiment == &quot;LowN&quot; &amp;
+#                                       cer == 2 &amp;
+#                                       par == 2) |&gt;
+#   select(gene_name) |&gt; pull()
+# test_counts &lt;- counts_tfdel[test_gene_idxs, sample_info_tfdel$organism == &quot;cer&quot;]
+# test_info &lt;- sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot;,]
+# plotExpressionProfileTFdels(.cts = test_counts, .info = test_info,
+#                             .normalization = &quot;none&quot;)
+
+plotSingleProfilesTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
+                                    .info1, .info2, .info3, .info4,
+                                    .name1 = &quot;S. cerevisiae WT&quot;,
+                                    .name2 = &quot;S. paradoxus WT&quot;,
+                                    .name3 = &quot;S. cerevisiae TFdel&quot;,
+                                    .name4 = &quot;S. paradoxus TFdel&quot;,
+                                    .color1 = &quot;orange1&quot;,
+                                    .color2 = &quot;blue2&quot;,
+                                    .color3 = &quot;orange4&quot;,
+                                    .color4 = &quot;blue4&quot;,
+                                    .normalization = c(&quot;none&quot;, &quot;log2&quot;, &quot;scale&quot;, &quot;centered log2&quot;),
+                                    .show_points_wt = TRUE,
+                                    .show_points_tfdel = TRUE,
+                                    .show_lines_wt = TRUE,
+                                    .show_lines_tfdel = FALSE,
+                                    .show_wt = TRUE,
+                                    .show_tfdel = TRUE,
+                                    .show_confidence_intervals = TRUE,
+                                    .plotlims = NULL) {
+  if (.normalization == &quot;none&quot;) {
+    norm_func &lt;- identity
+    ylabel &lt;- &quot;Expression&quot;
+  }
+  if (.normalization == &quot;log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1)}
+    ylabel &lt;- &quot;Expression (log2)&quot;
+  }
+  if (.normalization == &quot;scale&quot;) {
+    norm_func &lt;- \(x) {t(scale(t(x)))}
+    ylabel &lt;- &quot;Expression (centered and scaled)&quot;
+  }
+  if (.normalization == &quot;centered log2&quot;) {
+    norm_func &lt;- \(x) {log2(x + 1) - rowMeans(log2(x + 1), na.rm = TRUE)}
+    ylabel &lt;- &quot;Expression (centered log2)&quot;
+  }
+  if (!setequal(unique(.info1$experiment), unique(.info2$experiment))) {
+    stop(&quot;sample info dataframes do not contain same set of experiments\n&quot;)
+  }
+  info1 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info1$time_point_str,
+                  genotype = .info1$genotype,
+                  well_flask_ID = .info1$well_flask_ID)
+  info2 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info2$time_point_str,
+                  genotype = .info2$genotype,
+                  well_flask_ID = .info2$well_flask_ID)
+  info3 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info3$time_point_str,
+                  genotype = .info3$genotype,
+                  well_flask_ID = .info3$well_flask_ID)
+  info4 &lt;- tibble(experiment = &quot;LowN&quot;,
+                  time_point_str = .info4$time_point_str,
+                  genotype = .info4$genotype,
+                  well_flask_ID = .info4$well_flask_ID)
+  expr1 &lt;- norm_func(.cts1) |&gt; t()
+  expr2 &lt;- norm_func(.cts2) |&gt; t()
+  expr3 &lt;- norm_func(.cts3) |&gt; t()
+  expr4 &lt;- norm_func(.cts4) |&gt; t()
+  colnames(expr1) &lt;- rownames(.cts1)
+  colnames(expr2) &lt;- rownames(.cts2)
+  colnames(expr3) &lt;- rownames(.cts3)
+  colnames(expr4) &lt;- rownames(.cts4)
+  gdf1 &lt;- bind_cols(expr1, info1) |&gt; 
+    pivot_longer(cols = colnames(expr1), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf1$group_id &lt;- &quot;1&quot;
+  gdf2 &lt;- bind_cols(expr2, info2) |&gt; 
+    pivot_longer(cols = colnames(expr2), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf2$group_id &lt;- &quot;2&quot;
+  gdf3 &lt;- bind_cols(expr3, info3) |&gt; 
+    pivot_longer(cols = colnames(expr3), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf3$group_id &lt;- &quot;3&quot;
+  gdf4 &lt;- bind_cols(expr4, info4) |&gt; 
+    pivot_longer(cols = colnames(expr4), names_to = &quot;gene_name&quot;, values_to = &quot;expr&quot;)
+  gdf4$group_id &lt;- &quot;4&quot;
+  # enumerating replicates, so each one can stack right on top of each other
+  plotdf &lt;- bind_rows(gdf1, gdf2, gdf3, gdf4)
+  plotdf &lt;- plotdf |&gt; group_by(group_id, genotype, time_point_str, gene_name) |&gt; 
+    reframe(rep = rank(gene_name, ties.method = &quot;first&quot;),
+            gene_name = gene_name,
+            time_point_str = time_point_str,
+            genotype = genotype,
+            expr = expr,
+            group_id = group_id)
+  plotdf$rep &lt;- if_else(plotdf$genotype == &quot;WT&quot;,
+                        true = 1, false = plotdf$rep)
+  # plotting
+  p &lt;- ggplot() + 
+    theme_classic() +
+    scale_color_discrete(type = c(.color1, .color2, .color3, .color4), 
+                         labels = c(.name1, .name2, .name3, .name4),
+                         limits = c(&quot;1&quot;, &quot;2&quot;, &quot;3&quot;, &quot;4&quot;)) +
+    theme(legend.title = element_blank(),
+          legend.position = &quot;none&quot;) +
+    ylab(&quot;&quot;) +
+    xlab(&quot;&quot;)
+  # lines trace average expr at each timepoint/experiment for each group
+  avgexpr1 &lt;- plotdf %&gt;% filter(group_id == 1) |&gt; group_by(time_point_str, group_id, gene_name) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                                             sd_expr = sd(expr, na.rm = TRUE))
+  avgexpr2 &lt;- plotdf %&gt;% filter(group_id == 2) |&gt; group_by(time_point_str, group_id, gene_name) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
+                                                                                                             sd_expr = sd(expr, na.rm = TRUE))
+  p &lt;- p +
+    geom_line(data = avgexpr1, aes(x = time_point_str, y = mean_expr, group = interaction(group_id, gene_name)), color = .color1) +
+    geom_line(data = avgexpr2, aes(x = time_point_str, y = mean_expr, group = interaction(group_id, gene_name)), color = .color2) +
+    geom_line(data =  filter(plotdf, group_id == 3),
+              position = position_nudge(x = 0.05),
+              aes(x = time_point_str, y = expr,
+                  color = group_id, group = interaction(group_id, time_point_str, gene_name))) +
+    geom_point(data =  filter(plotdf, group_id == 3),
+               position = position_nudge(x = 0.05),
+               size = 0.25,
+               aes(x = time_point_str, y = expr,
+                   color = group_id)) +
+    geom_line(data =  filter(plotdf, group_id == 4),
+              position = position_nudge(x = -0.05),
+              aes(x = time_point_str, y = expr,
+                  color = group_id, group = interaction(group_id, time_point_str, gene_name))) +
+    geom_point(data =  filter(plotdf, group_id == 4),
+               position = position_nudge(x = -0.05),
+               size = 0.25,
+               aes(x = time_point_str, y = expr,
+                   color = group_id)) +
+  facet_wrap(~gene_name)
+  return(p)
+}
+
+# Wrapper function for plotExpressionProfileTFdel
+plotGenesTFdel &lt;- function(.gene_idxs, .tf, .parents_or_hybrid = &quot;parents&quot;,
+                           .plotlims = NULL, .single_genes = FALSE,
+                           .normalization = &quot;log2&quot;) {
+  if (.parents_or_hybrid == &quot;parents&quot; &amp; !.single_genes) {
+    p &lt;- plotExpressionProfileTFdel(.cts1 = counts_tfdel[.gene_idxs,
+                                                    sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                      sample_info_tfdel$genotype == &quot;WT&quot;,
+                                                    drop = FALSE],
+                               .cts2 = counts_tfdel[.gene_idxs,
+                                                    sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                      sample_info_tfdel$genotype == &quot;WT&quot;,
+                                                    drop = FALSE],
+                               .cts3 = counts_tfdel[.gene_idxs,
+                                                    sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                      sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
+                                                    drop = FALSE],
+                               .cts4 = counts_tfdel[.gene_idxs,
+                                                    sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                      sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
+                                                    drop = FALSE],
+                               .info1 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                            sample_info_tfdel$genotype == &quot;WT&quot;,],
+                               .info2 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                            sample_info_tfdel$genotype == &quot;WT&quot;,],
+                               .info3 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                            sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
+                               .info4 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                            sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
+                               .normalization = .normalization, .plotlims = .plotlims)
+  }
+  if (.parents_or_hybrid == &quot;hybrid&quot; &amp; !.single_genes) {
+    p &lt;- plotExpressionProfileTFdel(.cts1 = counts_tfdel_allele[.gene_idxs,
+                                                           sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                             sample_info_tfdel_allele$genotype == &quot;WT&quot;,
+                                                           drop = FALSE],
+                               .cts2 = counts_tfdel_allele[.gene_idxs,
+                                                           sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                             sample_info_tfdel_allele$genotype == &quot;WT&quot;,
+                                                           drop = FALSE],
+                               .cts3 = counts_tfdel_allele[.gene_idxs,
+                                                           sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                             sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
+                                                           drop = FALSE],
+                               .cts4 = counts_tfdel_allele[.gene_idxs,
+                                                           sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                             sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
+                                                           drop = FALSE],
+                               .info1 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                                   sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
+                               .info2 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                                   sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
+                               .info3 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                                   sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
+                               .info4 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                                   sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
+                               .normalization = .normalization, .plotlims = .plotlims)
+  }
+  if (.parents_or_hybrid == &quot;parents&quot; &amp; .single_genes) {
+    p &lt;- plotSingleProfilesTFdel(.cts1 = counts_tfdel[.gene_idxs,
+                                                      sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                        sample_info_tfdel$genotype == &quot;WT&quot;,
+                                                      drop = FALSE],
+                                 .cts2 = counts_tfdel[.gene_idxs,
+                                                      sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                        sample_info_tfdel$genotype == &quot;WT&quot;,
+                                                      drop = FALSE],
+                                 .cts3 = counts_tfdel[.gene_idxs,
+                                                      sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                        sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
+                                                      drop = FALSE],
+                                 .cts4 = counts_tfdel[.gene_idxs,
+                                                      sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                        sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
+                                                      drop = FALSE],
+                                 .info1 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                              sample_info_tfdel$genotype == &quot;WT&quot;,],
+                                 .info2 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                              sample_info_tfdel$genotype == &quot;WT&quot;,],
+                                 .info3 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
+                                                              sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .info4 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
+                                                              sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .normalization = .normalization, .plotlims = .plotlims)
+  }
+  if (.parents_or_hybrid == &quot;hybrid&quot; &amp; !.single_genes) {
+    p &lt;- plotSingleProfilesTFdel(.cts1 = counts_tfdel_allele[.gene_idxs,
+                                                             sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                               sample_info_tfdel_allele$genotype == &quot;WT&quot;,
+                                                             drop = FALSE],
+                                 .cts2 = counts_tfdel_allele[.gene_idxs,
+                                                             sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                               sample_info_tfdel_allele$genotype == &quot;WT&quot;,
+                                                             drop = FALSE],
+                                 .cts3 = counts_tfdel_allele[.gene_idxs,
+                                                             sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                               sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
+                                                             drop = FALSE],
+                                 .cts4 = counts_tfdel_allele[.gene_idxs,
+                                                             sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                               sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
+                                                             drop = FALSE],
+                                 .info1 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                                     sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
+                                 .info2 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                                     sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
+                                 .info3 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
+                                                                     sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .info4 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
+                                                                     sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .normalization = .normalization, .plotlims = .plotlims)
+  }
+  return(p)
+}
+# # test for plotGenesTFdel
+# gene_idxs &lt;- c(&quot;YBR163W&quot;, &quot;YBR265W&quot;, &quot;YGL048C&quot;, &quot;YGR101W&quot;, &quot;YJL085W&quot;, &quot;YLR085C&quot;, &quot;YLR118C&quot;,
+#                &quot;YLR274W&quot;, &quot;YLR283W&quot;, &quot;YOR047C&quot;, &quot;YOR201C&quot;, &quot;YOR315W&quot;, &quot;YPR105C&quot;, &quot;YPR129W&quot;,
+#                &quot;YPR198W&quot;)
+# plotGenesTFdel(.tf = &quot;GCR2&quot;, .gene_idxs = gene_idxs)
+# plotGenesTFdel(.tf = &quot;GCR2&quot;, .gene_idxs = gene_idxs, .single_genes = TRUE)</code></pre>
+<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;purrr&quot;, &quot;tidyr&quot;, &quot;ggpubr&quot;, &quot;readr&quot;,
+         &quot;data.table&quot;, &quot;ggplot2&quot;, &quot;data.table&quot;, 
+         &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
+<pre><code>##       dplyr       purrr       tidyr      ggpubr       readr 
+##        TRUE        TRUE        TRUE        TRUE        TRUE 
+##  data.table     ggplot2  data.table matrixStats 
+##        TRUE        TRUE        TRUE        TRUE</code></pre>
 
 
 

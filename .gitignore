@@ -2,4 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-*.png
+*ReadsPerGene.out.tab
+*.xlsx

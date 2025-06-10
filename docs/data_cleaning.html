@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Data Cleaning</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Networks</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Data Cleaning
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="data_cleaning.html">Import and clean count data</a>
+    </li>
+  </ul>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Data Cleaning</h1>
+
+</div>
+
+
+<div id="data-cleaning" class="section level1">
+<h1>Data Cleaning</h1>
+<p>Here’s where we load the 3’ tagseq samples, normalize them, and
+assemble them into a single count matrix.</p>
+<p>Working with RNAseq data published in Krieger et al. 2020</p>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2 
+##        TRUE        TRUE        TRUE        TRUE        TRUE 
+##      ggpubr    openxlsx matrixStats 
+##        TRUE        TRUE        TRUE</code></pre>
+<div id="reading-in-tagseq-data-and-separating-allele-specific-counts"
+class="section level2">
+<h2>Reading in tagseq data and separating allele-specific counts</h2>
+<p>Reading in quantified RNAseq counts as individual
+*.ReadsPerGene.out.tab files, one file per sample. Counts for each
+allele of each gene are on separate rows. Systematic gene names are
+prepended with the species name (example: cer_YGR192C is the TDH3
+ortholog from S. cerevisiae). Logistically, it’ll work better for the
+analysis if we condense this format into only one row per gene (example:
+one YGR192C row). To do this, we first have to separate the counts for
+the Scer ortholog from the counts for the Spar ortholog:</p>
+<pre class="r"><code>tagseq &lt;- list.files(&quot;data_files/tagseq_counts/&quot;, 
+                     full.names = TRUE) |&gt; 
+  map(read_table, col_names = FALSE, show_col_types = FALSE) |&gt; 
+  map(.f = select, X1, X3) |&gt; # X1 are gene names, X3 is the sense strand read count
+  purrr::reduce(.f = \(x, y) full_join(x = x, y = y, by = &quot;X1&quot;))
+
+colnames(tagseq) &lt;- c(&quot;gene&quot;, gsub(&quot;_ReadsPerGene.out.tab&quot;, &quot;&quot;, list.files(&quot;data_files/tagseq_counts/&quot;, full.names = FALSE)))
+QCdf &lt;- tagseq[grepl(&quot;N_&quot;, tagseq$gene), ]
+tagseq &lt;- tagseq[!grepl(&quot;N_&quot;, tagseq$gene),]
+tagseq &lt;- tagseq[!tagseq$gene %in% c(&quot;cer_NA&quot;, &quot;par_NA&quot;),]
+tagseq_cer &lt;- tagseq[grepl(&quot;^cer_&quot;, tagseq$gene),]
+tagseq_par &lt;- tagseq[grepl(&quot;^par_&quot;, tagseq$gene),]
+common_genes &lt;- intersect(gsub(&quot;^cer_&quot;, &quot;&quot;, tagseq_cer$gene),
+                          gsub(&quot;^par_&quot;, &quot;&quot;, tagseq_par$gene))
+tagseq_cer$gene &lt;- gsub(&quot;^cer_&quot;, &quot;&quot;, tagseq_cer$gene)
+tagseq_par$gene &lt;- gsub(&quot;^par_&quot;, &quot;&quot;, tagseq_par$gene)
+tagseq_cer &lt;- tagseq_cer[sapply(common_genes, \(x) which(x == tagseq_cer$gene)),]
+tagseq_par &lt;- tagseq_par[sapply(common_genes, \(x) which(x == tagseq_par$gene)),]
+sum(tagseq_cer$gene == tagseq_par$gene)</code></pre>
+<pre><code>## [1] 5359</code></pre>
+<pre class="r"><code>length(common_genes)</code></pre>
+<pre><code>## [1] 5359</code></pre>
+</div>
+<div id="calculating-mapping-to-each-allele-for-parents-vs-hybrids"
+class="section level2">
+<h2>Calculating % mapping to each allele for parents vs hybrids</h2>
+<p>In the parental samples, this means limiting to those reads that
+mapped to the “correct” parent’s allele: in Scer samples, we use Scer
+allele counts, in Spar samples, we use Spar allele counts. In the hybrid
+this means splitting allele reads into separate columns.</p>
+<p>But before we do this, we should make sure there aren’t a lot of
+reads mapping to the “wrong” parent</p>
+<p>Before we check percent mapping, we should filter out genes with very
+few reads total, as they’ll have highly variable percents based only on
+a few reads.</p>
+<pre class="r"><code># normalizing function for filtering out lowly expressed 
+# genes prior to assessing mapping bias
+# (used later to actually normalize count data)
+# normalizing counts to adjust for differences in library size
+# sums .cts_cer and .cts_par to get library size, only returns
+# counts for specified allele
+# @input: count matrix (genes are rows, columns are samples)
+# @output: a count matrix normalzied for library size---integer counts in counts-per-million
+countsPerMillionAllele &lt;- function(.cts_cer, .cts_par, .allele) {
+  librarySizes &lt;- colSums(.cts_cer, na.rm = TRUE) + colSums(.cts_par, na.rm = TRUE)
+  if (.allele == &quot;cer&quot;) {
+    .cts &lt;- .cts_cer
+  }
+  if (.allele == &quot;par&quot;) {
+    .cts &lt;- .cts_par
+  }
+  output &lt;- apply(.cts, 1, function(x) {
+    normalized &lt;- (x/librarySizes)*1e6
+    return(round(normalized))
+  })
+  return(t(output)) # For some unhinged reason, a vector output of apply across ROWS forms the COLUMNS of a new matrix
+}
+# tests for countsPerMillionAllele
+test_cts &lt;- tagseq_cer[,-1]
+test_rowIdx &lt;- sample(c(1:nrow(test_cts)), 1)
+test_colIdx &lt;- sample(which(grepl(&quot;cer&quot;, colnames(test_cts))), 1)
+test_count &lt;- test_cts[test_rowIdx, test_colIdx]
+test_cpm &lt;- countsPerMillionAllele(.cts_cer = tagseq_cer[,-1], 
+                                   .cts_par = tagseq_par[,-1],
+                                   .allele = &quot;cer&quot;)
+((test_count/(colSums(tagseq_cer[,-1], na.rm = TRUE) + 
+                colSums(tagseq_par[,-1], na.rm = TRUE))[test_colIdx])*1e6) %&gt;% 
+  round() # what it should be</code></pre>
+<pre><code>##   GCR2_TP1_cer_P4C2_A2_G4_GS9a
+## 1                            0</code></pre>
+<pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
+<pre><code>## # A tibble: 1 × 1
+##   GCR2_TP1_cer_P4C2_A2_G4_GS9a
+##                          &lt;dbl&gt;
+## 1                            0</code></pre>
+<pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
+<pre><code>## GCR2_TP1_cer_P4C2_A2_G4_GS9a 
+##                            0</code></pre>
+<p>Now we can calculate percent reads mapping to each allele in parental
+samples</p>
+<pre class="r"><code># 1) normalize to counts per million based on total 
+# library size: cer reads + par reads regardless of sample organism
+cpm_cer &lt;- countsPerMillionAllele(.cts_cer = tagseq_cer[,-1],
+                                      .cts_par = tagseq_par[,-1],
+                                      .allele = &quot;cer&quot;)
+cpm_par &lt;- countsPerMillionAllele(.cts_cer = tagseq_cer[,-1],
+                                      .cts_par = tagseq_par[,-1],
+                                      .allele = &quot;par&quot;)
+# 2) filter lowly expressed: &lt; 30 cpm
+sum(cpm_cer == 0 &amp; cpm_par == 0)</code></pre>
+<pre><code>## [1] 246564</code></pre>
+<pre class="r"><code>isHighExpr &lt;- (rowMeans(cpm_cer + cpm_par) &gt; 30) |&gt; sapply(FUN = isTRUE)
+keep_genes &lt;- common_genes[isHighExpr]
+cpm_cer &lt;- cpm_cer[isHighExpr,]
+cpm_par &lt;- cpm_par[isHighExpr,]
+sum(cpm_cer == 0 &amp; cpm_par == 0) # note there are still individual samples with zero counts</code></pre>
+<pre><code>## [1] 26069</code></pre>
+<pre class="r"><code># 3) check % cer of all high-enough expressed genes is close to 1 for cer samples and 0 for par samples
+plotdf &lt;- bind_rows(bind_cols(tibble(gene = keep_genes,
+                                     allele = &quot;cer&quot;), cpm_cer),
+                    bind_cols(tibble(gene = keep_genes,
+                                     allele = &quot;par&quot;), cpm_par)) |&gt; 
+  pivot_longer(cols = colnames(tagseq_cer[,-c(1,2)]),
+               names_to = c(&quot;sample_name&quot;),
+               values_to = &quot;count&quot;) |&gt; 
+  pivot_wider(id_cols = c(&quot;sample_name&quot;, &quot;gene&quot;),
+              values_from = &quot;count&quot;, names_from = &quot;allele&quot;,
+              names_prefix = &quot;counts_&quot;)
+plotdf$organism &lt;- if_else(grepl(&quot;_cer_&quot;, plotdf$sample_name),
+                           true = &quot;cerSample&quot;, 
+                           false = if_else(grepl(&quot;_par_&quot;, plotdf$sample_name),
+                                           true = &quot;parSample&quot;,
+                                           false = &quot;hybSample&quot;))
+# Calculating % of reads mapping to the Scer allele 
+# for each gene/sample
+# (So % Spar is 1 - % Scer)
+plotdf$pct_cer &lt;- if_else(plotdf$counts_cer == 0 &amp;
+                            plotdf$counts_par == 0,
+                          true = NA,
+                          false = plotdf$counts_cer/(plotdf$counts_cer + plotdf$counts_par))
+plotdf &lt;- drop_na(plotdf)
+sample_genes &lt;- sample(plotdf$gene, size = 100)
+cer_genedf &lt;- plotdf |&gt; filter(organism == &quot;cerSample&quot;) |&gt; 
+  group_by(gene) |&gt; 
+  summarise(avg_pct_cer = mean(pct_cer, na.rm = TRUE))
+hist(cer_genedf$avg_pct_cer, breaks = 50)
+abline(v = 0.9, col = &quot;red&quot;)</code></pre>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code>par_genedf &lt;- plotdf |&gt; filter(organism == &quot;parSample&quot;) |&gt; 
+  group_by(gene) |&gt; 
+  summarise(avg_pct_cer = mean(pct_cer, na.rm = TRUE))
+hist(par_genedf$avg_pct_cer, breaks = 50)
+abline(v = 0.1, col = &quot;red&quot;)</code></pre>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-4-2.png" width="672" /></p>
+<p>As expected, genes from Scer samples have a high percentage of reads
+mapping to the Scer gene ortholog and vice versa for Spar.</p>
+</div>
+<div id="combining-allele-specific-counts" class="section level2">
+<h2>Combining allele-specific counts</h2>
+<p>Now we are ready to combine allele-specific counts into a single
+count matrix. To do this, we need to know which samples come from which
+organism, so we will first load our sample metadata.</p>
+<pre class="r"><code># tagseq
+# reading in sample info
+sample_info &lt;- read.xlsx(&quot;data_files/sample_metadata/bioSample1to999.xlsx&quot;, na.strings=&quot;not applicable&quot;, cols=c(1,4,9,13,14,15,17)) %&gt;%
+  bind_rows(read.xlsx(&quot;data_files/sample_metadata/bioSample1000toEnd.xlsx&quot;, na.strings=&quot;not applicable&quot;, cols=c(1,4,9,13,14,15,17)))
+colnames(sample_info) &lt;- c(&quot;sample_name&quot;, &quot;organism&quot; , &quot;collection_date&quot;, &quot;genotype&quot;, &quot;experiment&quot;,&quot;time_point&quot;, &quot;well_flask_ID&quot;)
+# removing samples not from LowN experiment
+sample_info &lt;- filter(sample_info, experiment == &quot;YPD to Low N&quot;)
+cat(&quot;All metadata samples are in counts matrix Scer:&quot;, all(sample_info$sample_name %in% colnames(tagseq_cer)), &quot;\n&quot;)</code></pre>
+<pre><code>## All metadata samples are in counts matrix Scer: TRUE</code></pre>
+<pre class="r"><code>cat(&quot;All metadata samples are in counts matrix Spar:&quot;, all(sample_info$sample_name %in% colnames(tagseq_par)), &quot;\n&quot;)</code></pre>
+<pre><code>## All metadata samples are in counts matrix Spar: TRUE</code></pre>
+<pre class="r"><code># creating count matrix
+counts &lt;- apply(sample_info, 1, \(x) {
+  sample_name &lt;- x[&quot;sample_name&quot;]
+  org &lt;- x[&quot;organism&quot;]
+  if (!sample_name %in% colnames(tagseq_cer)) {
+    cat(&quot;missing sample&quot;, sample_name, &quot;\n&quot;)
+    output &lt;- matrix(NA, nrow = nrow(tagseq_cer), ncol = 1)
+    colnames(output) &lt;- sample_name
+    return(output)
+  }
+  if (org == &quot;Saccharomyces cerevisiae&quot;) {
+    return(tagseq_cer[,sample_name, drop = FALSE])
+  }
+  if (org == &quot;Saccharomyces paradoxus&quot;) {
+    return(tagseq_par[,sample_name, drop = FALSE])
+  }
+  if (org == &quot;Saccharomyces cerevisiae x Saccharomyces paradoxus&quot;) {
+    cer_countcol &lt;- tagseq_cer[,sample_name]
+    par_countcol &lt;- tagseq_par[,sample_name]
+    output &lt;- cbind(cer_countcol, par_countcol)
+    colnames(output) &lt;- c(gsub(&quot;_hyb_&quot;, &quot;_hyc_&quot;, sample_name),
+                          gsub(&quot;_hyb_&quot;, &quot;_hyp_&quot;, sample_name))
+    return(output)
+  }
+}) |&gt; Reduce(f = cbind)
+cat(&quot;All gene names are the same in combined count matrix and Scer count matrix:&quot;, all(rownames(counts) == rownames(tagseq_cer)), &quot;
+    \n&quot;)</code></pre>
+<pre><code>## All gene names are the same in combined count matrix and Scer count matrix: TRUE 
+## </code></pre>
+<pre class="r"><code>cat(&quot;All gene names are the same in combined count matrix and Spar count matrix:&quot;, all(rownames(counts) == rownames(tagseq_par)), &quot;
+    \n&quot;)</code></pre>
+<pre><code>## All gene names are the same in combined count matrix and Spar count matrix: TRUE 
+## </code></pre>
+<pre class="r"><code># adding second row for each hybrid allele in info df
+sample_info &lt;- map(c(1:nrow(sample_info)), \(i) {
+  x &lt;- sample_info[i,]
+  org &lt;- sample_info[i,&quot;organism&quot;]
+  if (org == &quot;Saccharomyces cerevisiae x Saccharomyces paradoxus&quot;) {
+    x_cer &lt;- x
+    x_par &lt;- x
+    x_cer[&quot;sample_name&quot;] &lt;- gsub(&quot;_hyb_&quot;, &quot;_hyc_&quot;, x_cer[&quot;sample_name&quot;])
+    x_par[&quot;sample_name&quot;] &lt;- gsub(&quot;_hyb_&quot;, &quot;_hyp_&quot;, x_par[&quot;sample_name&quot;])
+    output &lt;- bind_rows(x_cer, x_par)
+    return(output)
+  }
+  if (org != &quot;Saccharomyces cerevisiae x Saccharomyces paradoxus&quot;) {
+    return(x)
+  }
+}) |&gt; purrr::reduce(.f = bind_rows)
+cat(&quot;All samples in the same order in count matrix and metadata:&quot;, all(colnames(counts) == sample_info$sample_name), &quot;\n&quot;)</code></pre>
+<pre><code>## All samples in the same order in count matrix and metadata: TRUE</code></pre>
+</div>
+<div id="cleaning-up-some-sample-info-column-values"
+class="section level2">
+<h2>cleaning up some sample info column values</h2>
+<pre class="r"><code># shorten organism names
+sample_info$organism &lt;- map_chr(sample_info$sample_name, function(s) {
+  if (grepl(&quot;_cer_&quot;, s)) {
+    return(&quot;cer&quot;)
+  }
+  if (grepl(&quot;_par_&quot;, s)) {
+    return(&quot;par&quot;)
+  }
+  if (grepl(&quot;_hy[pc]_&quot;, s)) {
+    return(&quot;hyb&quot;)
+  }
+})
+
+# add allele column
+sample_info$allele &lt;- map_chr(sample_info$sample_name, function(s) {
+  if (grepl(&quot;_cer_&quot;, s) | grepl(&quot;_hyc_&quot;, s)) {
+    return(&quot;cer&quot;)
+  }
+  if (grepl(&quot;_par_&quot;, s) | grepl(&quot;_hyp_&quot;, s)) {
+    return(&quot;par&quot;)
+  }
+})
+
+# removing space from genotype
+sample_info$genotype &lt;- gsub(&quot; &quot;, &quot;&quot;, sample_info$genotype)
+
+# converting timepoint to integer values of minutes
+timepoint_to_int &lt;- function(t) {
+  if (grepl(&quot;[0-9] h&quot;, t)) {
+    return(parse_number(t)*60)
+  }
+  else {
+    return(parse_number(t))
+  }
+}
+sample_info$time_point_num &lt;- map_dbl(sample_info$time_point, timepoint_to_int)
+colnames(sample_info) &lt;- map_chr(colnames(sample_info), gsub, pattern = &quot;^time_point$&quot;, replacement = &quot;time_point_str&quot;) # time_point_str is the version that we&#39;ll use for DESeq2, so we can set a reference level (but we&#39;ll have to do that later)
+
+# preserving sample information that is non-unique for replicates
+sample_info$condition &lt;- paste(sample_info$genotype,
+                               sample_info$time_point_num, sep=&quot;_&quot;)
+
+# In case you&#39;re wondering, the collection date is when RNA was collected, 
+# NOT when the living yeast sample was collected
+# (only like 65 samples total have a collection date within 24 hours 
+# for all 3 samples, and that&#39;s mostly because a lot of samples were collected on those dates)
+sample_info &lt;- select(sample_info, !collection_date)
+
+# Check for missing (NA) values
+geneHasNAs &lt;- apply(counts, 1, function(x) {
+  isNA &lt;- sapply(x, is.na)
+  return(any(isNA))
+}) 
+sum(geneHasNAs) # should have 0</code></pre>
+<pre><code>## [1] 0</code></pre>
+</div>
+<div id="removing-samples-with-small-library-sizes"
+class="section level2">
+<h2>Removing samples with small library sizes</h2>
+<pre class="r"><code># Exploring library sizes (un-normalized)
+libsizes &lt;- colSums(counts) # these counts include all samples, hybrid and parental
+ggplot(tibble(libsize = libsizes), aes(x = libsize)) + geom_histogram()</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>sort(libsizes)[c(1:20)]</code></pre>
+<pre><code>##  GLN3_TP3_hyc_remnants_B3_C5_GS11  GLN3_TP3_hyp_remnants_B3_C5_GS11 
+##                            105424                            105759 
+##         TEC1_TP2_hyp_H2_A2_D2_GS4      STB5_TP3_par_P4C2_G2_B3_GS10 
+##                            106406                            106623 
+##         TEC1_TP2_hyc_H2_A2_D2_GS4 ARG81_TP2_par_remnants2_H2_F9_GS8 
+##                            106797                            108755 
+##         RFX1_TP2_hyc_H2_C5_G8_GS4         HAP4_TP2_hyc_H2_C3_B6_GS4 
+##                            111314                            111562 
+##         RFX1_TP2_hyp_H2_C5_G8_GS4        GZF3_TP2_hyc_H2_A6_D11_GS4 
+##                            112245                            112341 
+##         HAP4_TP2_hyp_H2_C3_B6_GS4        GZF3_TP2_hyp_H2_A6_D11_GS4 
+##                            112959                            113398 
+## ACE2_TP3_par_remnants2_G1_A1_GS13         HAP5_TP2_cer_C3_E2_C6_GS8 
+##                            114732                            116276 
+##          WT_TP2_par_P5_E2_G6_GS13      AFT1_TP2_hyc_P3H1_C6_H10_GS6 
+##                            117042                            118855 
+##      ARG80_TP2_hyc_P3H1_H2_E3_GS6         RFX1_TP2_cer_C3_F4_G8_GS8 
+##                            120618                            122925 
+##      AFT1_TP2_hyp_P3H1_C6_H10_GS6         MBP1_TP2_cer_C1_B4_C7_GS1 
+##                            124823                            125027</code></pre>
+<p>No libraries under 100k reads, no need to remove small libraries
+prior to normalizing.</p>
+<p>Are the hybrid library sizes correlated between hyc and hyp
+alleles?</p>
+<pre class="r"><code>plotdf &lt;- tibble(sample_name = names(libsizes[grepl(&quot;_hy[pc]&quot;, names(libsizes))]),
+                 libsize = libsizes[grepl(&quot;_hy[pc]&quot;, names(libsizes))]) |&gt; 
+  left_join(y = select(filter(sample_info, organism == &quot;hyb&quot;), sample_name, experiment), by = &quot;sample_name&quot;)
+plotdf$allele &lt;- if_else(grepl(pattern = &quot;_hyc_&quot;, plotdf$sample_name),
+                         true = &quot;cer&quot;, false = &quot;par&quot;)
+plotdf$sample_name &lt;- gsub(&quot;_hy[pc]_&quot;, &quot;_hyb_&quot;, plotdf$sample_name)
+plotdf &lt;- plotdf |&gt; pivot_wider(id_cols = c(&quot;sample_name&quot;, &quot;experiment&quot;), 
+                                names_from = allele,
+                                values_from = libsize)
+ggplot(plotdf, aes(x = cer, y = par)) + 
+  geom_point(aes(color = experiment), alpha = 0.5) +
+  geom_text(data = filter(plotdf, cer &gt; par*1.5 | par &gt; cer*1.5),
+            aes(label = sample_name), check_overlap = TRUE, color = &quot;green&quot;) +
+  geom_abline(intercept = 0, slope = 1, color = &quot;red&quot;) +
+  geom_rect(xmin = 0, xmax = 100000, ymin = 0, ymax = 100000, color = &quot;blue&quot;, alpha = 0) +
+  geom_vline(xintercept = 100000, color = &quot;blue&quot;, alpha = 0.5) +
+  geom_hline(yintercept = 100000, color = &quot;blue&quot;, alpha = 0.5)</code></pre>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<pre class="r"><code># (the samples within the blue box will be removed by our library size threshold below)
+# and no other samples should be below the blue lines but not within the blue box</code></pre>
+<p>Conclusion: yes, very correlated.</p>
+</div>
+<div id="normalizing-to-counts-per-million" class="section level2">
+<h2>Normalizing to counts per million</h2>
+<p>In tagseq data, 1 read = one mRNA molecule. So normalizing to counts
+per million is simply dividing the count by the library size * 1
+million.</p>
+<pre class="r"><code># normalizing counts to adjust for differences in library size
+# @input: count matrix (genes are rows, columns are samples)
+# @output: a count matrix normalzied for library size---integer counts in counts-per-million
+countsPerMillion &lt;- function(.cts) {
+  librarySizes &lt;- colSums(.cts, na.rm = TRUE)
+  output &lt;- apply(.cts, 1, function(x) {
+    normalized &lt;- (x/librarySizes)*1e6
+    return(round(normalized))
+  })
+  return(t(output)) # For some unhinged reason, a vector output of apply across ROWS forms the COLUMNS of a new matrix
+}
+# tests for countsPerMillion
+test_cts &lt;- counts[,grepl(&quot;_par&quot;, colnames(counts))]
+test_rowIdx &lt;- sample(c(1:nrow(test_cts)), 1)
+test_colIdx &lt;- sample(c(1:ncol(test_cts)), 1)
+test_count &lt;- test_cts[test_rowIdx, test_colIdx]
+test_cpm &lt;- countsPerMillion(test_cts)
+test_cpm_cpm &lt;- countsPerMillion(test_cpm)
+((test_count/colSums(test_cts, na.rm = TRUE)[test_colIdx])*1e6) %&gt;% round() # what it should be</code></pre>
+<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
+##                        61</code></pre>
+<pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
+<pre><code>## [1] 41</code></pre>
+<pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
+<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
+##                        61</code></pre>
+<pre class="r"><code>test_cpm_cpm[test_rowIdx, test_colIdx] # what it is if you run cpm too many times (should be the same as test_cpm)</code></pre>
+<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
+##                        61</code></pre>
+<p>Actually normalizing</p>
+<pre class="r"><code>counts_unnorm &lt;- counts
+counts &lt;- countsPerMillion(counts)</code></pre>
+</div>
+<div id="saving" class="section level2">
+<h2>Saving</h2>
+<pre class="r"><code>save(counts, counts_unnorm, sample_info, file = &quot;data_files/CleanedCounts.RData&quot;)</code></pre>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
