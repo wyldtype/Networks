@@ -1,0 +1,1324 @@
+---
+title: "Quality Control"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# QC: comparing power to detect DE genes upon TF deletion in each species
+
+TODO: use anything useful in this script for QC of power in different organisms, but don't get bogged down in all the complexities of comparing models etc.
+```{r}
+# sapply(c("dplyr", "purrr", "tidyr", "ggpubr", "readr", "data.table", "ggplot2", "data.table", "msir", "WGCNA", "energy"), require, character.only=TRUE)
+# setwd("/Users/annar/Documents/Wittkopp_Lab/networks/DDivergence/Redhuis2025/")
+# library(MASS, include.only = "glm.nb")
+# 
+# # set constants
+# coef_thresh <- 1 # minimum magnitude, so if it's < -coef_thresh, we also want that to be detected
+# p_thresh <- 1e-5
+# 
+# # Goal #1: recapitulate power issue in non-DESeq2 models, examples:
+# # YAP1 TP3 has stronger power in Scer than Spar
+# # MET28 TP1 has stronger power in Spar than Scer
+# 
+# ### Cleaning data
+# load(file = "data_files/TFdel.RData")
+# 
+# # verify that counts are counts per million
+# # Should have very little variation around libsize of 1mil
+# hist(colSums(counts_tfdel, na.rm = TRUE))
+# hist(colSums(counts_tfdel_allele, na.rm = TRUE))
+# 
+# infos_list <- list("cer_TP1" = filter(sample_info_tfdel, allele == "cer" &
+#                                         time_point_str == "0 h, YPD"),
+#                    "cer_TP2" = filter(sample_info_tfdel, allele == "cer" &
+#                                         time_point_str == "1 h, low N"),
+#                    "cer_TP3" = filter(sample_info_tfdel, allele == "cer" &
+#                                         time_point_str == "16 h, low N"),
+#                    "par_TP1" = filter(sample_info_tfdel, allele == "par" &
+#                                         time_point_str == "0 h, YPD"),
+#                    "par_TP2" = filter(sample_info_tfdel, allele == "par" &
+#                                         time_point_str == "1 h, low N"),
+#                    "par_TP3" = filter(sample_info_tfdel, allele == "par" &
+#                                         time_point_str == "16 h, low N"),
+#                    "hyc_TP1" = filter(sample_info_tfdel_allele, allele == "cer" &
+#                                         time_point_str == "0 h, YPD"),
+#                    "hyc_TP2" = filter(sample_info_tfdel_allele, allele == "cer" &
+#                                         time_point_str == "1 h, low N"),
+#                    "hyc_TP3" = filter(sample_info_tfdel_allele, allele == "cer" &
+#                                         time_point_str == "16 h, low N"),
+#                    "hyp_TP1" = filter(sample_info_tfdel_allele, allele == "par" &
+#                                         time_point_str == "0 h, YPD"),
+#                    "hyp_TP2" = filter(sample_info_tfdel_allele, allele == "par" &
+#                                         time_point_str == "1 h, low N"),
+#                    "hyp_TP3" = filter(sample_info_tfdel_allele, allele == "par" &
+#                                         time_point_str == "16 h, low N"))
+# 
+# counts_list <- map(infos_list, \(x) {
+#   samples <- select(x, sample_name) |> pull()
+#   cts <- cbind(counts_tfdel, counts_tfdel_allele)
+#   return(cts[, samples])
+# })
+# 
+# # test data : YAP1 in TP3, MET28 in TP1
+# infos_list_test <- list("cer_YAP1" = filter(infos_list$cer_TP3,
+#                                             genotype %in% c("WT", "YAP1delete")),
+#                         "par_YAP1" = filter(infos_list$par_TP3,
+#                                             genotype %in% c("WT", "YAP1delete")),
+#                         "cer_MET28" = filter(infos_list$cer_TP1,
+#                                              genotype %in% c("WT", "MET28delete")),
+#                         "par_MET28" = filter(infos_list$par_TP1,
+#                                              genotype %in% c("WT", "MET28delete")))
+# infos_list_test <- map(infos_list_test, \(x) {
+#   x$genotype <- droplevels(x$genotype)
+#   return(x)
+# })
+# counts_list_test <- map(infos_list_test, \(x) {
+#   samples <- select(x, sample_name) |> pull()
+#   cts <- cbind(counts_tfdel, counts_tfdel_allele)
+#   return(cts[, samples])
+# })
+# 
+# #### model fitting ####
+# factorizeGenotypeAndTimepoint <- function(.info) {
+#   if (length(unique(.info$genotype)) > 1) {
+#     .info$genotype <- as.factor(.info$genotype) %>% relevel(ref = "WT")
+#   }
+#   if (length(unique(.info$time_point_str)) > 1) {
+#     timepoints <- .info$time_point_str %>% unique()
+#     reftime <- timepoints[which.min(parse_number(timepoints))] # can't just do 0 because LowPi has a -5 fml
+#     .info$time_point_str <- as.factor(.info$time_point_str) %>% relevel(ref = reftime)
+#   }
+#   return(.info)
+# }
+# infos_list <- map(infos_list, factorizeGenotypeAndTimepoint)
+# 
+# # first exploring detecting which TF deletions a gene is DE in with a positive control
+# gene_idx <- "YGR192C" # YGR192C (TDH3) in GCR2 delete
+# genedf <- bind_cols(tibble(expr = counts_list$cer_TP1[gene_idx, ]), infos_list$cer_TP1)
+# ggplot(genedf, aes(x = genotype, y = expr)) + geom_point() + scale_x_discrete(breaks = NULL)
+# modnb <- glm.nb(expr ~ genotype, data = genedf, link = log)
+# modpois <- glm(expr ~ genotype, data = genedf, family = poisson(link = "log"))
+# summary(modnb)
+# genedf$p_hat <- modnb$fitted.values
+# plotdf <- pivot_longer(genedf, cols = c(p_hat, expr))
+# ggplot(data = plotdf, aes(x = genotype, y = value)) +
+#   geom_point(aes(color = name, shape = as.factor(time_point_str))) +
+#   scale_x_discrete(breaks = NULL)
+# coeffs <- coef(modnb)[grepl("^genotype", names(coef(modnb)))]
+# pvals <- summary(modnb)$coefficients[,4][grepl("^genotype", names(coef(modnb)))]
+# sigGenotypes <- names(coeffs[abs(coeffs) > 0.5 & pvals < p_thresh]) %>% gsub(pattern = "genotype", replacement = "")
+# genedf$sig <- genedf$genotype %in% sigGenotypes
+# genedf$sig[genedf$genotype == "WT"] <- NA
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = sig)) +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+# 
+# # now making it a function so we can apply it to all genes
+# # @input: gene name, counts matrix (where rows are samples, cols are genes),
+# #         and info dataframe for LowN experiment in one species
+# # @ouput: list of three elements: 1) pvalues of each coefficient (of length nDeletions)
+# #                                 2) coefficients (effect sizes) of each TFdel's effect on the focal gene
+# #                                 3) name of which deletion each coefficient/pvalue corresponds to
+# 
+# getTFdelModResultsByGene <- function(.gene_idx, .cts, .info, .mod_func) {
+#   gdf <- bind_cols(tibble(expr = .cts[.gene_idx,]), .info)
+#   get1genemod <- function(del) {
+#     gdf2gen <- gdf |> filter(genotype %in% c("WT", del))
+#     gdf2gen$genotype <- droplevels(gdf2gen$genotype)
+#     # fitting model
+#     m <- tryCatch({
+#       .mod_func(.data = gdf2gen)
+#     }, error = function(e) {
+#       return(NA)
+#     })
+#     if (!is.na(m)[1]) {
+#       pval <- summary(m)$coefficients[,4][paste0("genotype", del)]
+#       coef <- coef(m)[paste0("genotype", del)]
+#       return(list("pval" = as.numeric(pval),
+#                   "coef" = as.numeric(coef),
+#                   "deletion" = gsub("delete", "", as.character(del))))
+#     }
+#     else {
+#       return(list("pval" = NA,
+#                   "coef" = NA,
+#                   "deletion" = NA))
+#     }
+#   }
+#   output <- map_dfr(.x = setdiff(unique(gdf$genotype), "WT"),
+#                     .f = get1genemod)
+#   output$gene_name <- .gene_idx
+#   return(output)
+# }
+# # models to compare
+# mod_poisglm <- function(.data) {
+#   m <- glm(expr ~ genotype, data = .data, family = poisson(link = "log"))
+#   return(m)
+# }
+# mod_negbin <- function(.data) {
+#   m <- glm.nb(expr ~ genotype, data = .data, link = log)
+#   return(m)
+# }
+# # # tests for getTFdelModResultsByGene
+# # getTFdelModResultsByGene(.gene_idx = "YGR192C",
+# #                          .cts = counts_list_test$cer_YAP1,
+# #                          .info = infos_list_test$cer_YAP1,
+# #                          .mod_func = mod_poisglm)
+# 
+# # fitting all models (takes 5eva)
+# TFdeldfs_pois <- map2(.x = counts_list,
+#                       .y = infos_list,
+#                       \(x, y) {
+#                         output <- map(rownames(x), \(g) {
+#                           cat(unique(y$allele), unique(y$time_point_str), 
+#                               "pois working on", g, which(rownames(x) == g), "/", nrow(x), "\n")
+#                           return(getTFdelModResultsByGene(g, x, y, .mod_func = mod_poisglm))
+#                         }) |> purrr::reduce(.f = rbind)
+#                       })
+# TFdeldfs_negbin <- map2(.x = counts_list,
+#                         .y = infos_list,
+#                         \(x, y) {
+#                           output <- map(rownames(x), \(g) {
+#                             cat(unique(y$allele), unique(y$time_point_str), 
+#                                 "negbin working on", g, which(rownames(x) == g), "/", nrow(x), "\n")
+#                             return(getTFdelModResultsByGene(g, x, y, .mod_func = mod_negbin))
+#                           }) |> purrr::reduce(.f = rbind)
+#                         })
+# 
+# # converting natural log fold change to log2 fold change
+# # e^x= 2^y
+# # log2(e^x) = y
+# # x*log2(e) = y
+# # x*(1/log(2)) = y
+# TFdeldfs_pois <- lapply(TFdeldfs_pois, \(x) {
+#   x$coef <- x$coef/log(2)
+#   return(x)
+# })
+# TFdeldfs_negbin <- lapply(TFdeldfs_negbin, \(x) {
+#   x$coef <- x$coef/log(2)
+#   return(x)
+# })
+# 
+# # standardized mean difference (https://cran.r-project.org/web/packages/TOSTER/vignettes/SMD_calcs.html)
+# # a measure of difference btween WT and TFdel to benchmark model effect sizes off of
+# # standarized mean difference is calculated as:
+# # (m2 - m1)/s_av
+# # s_av = sqrt((sd1^2 + sd2^2)/2) (square root of the mean variance)
+# # where m1 and sd1 are the mean and sd of counts from WT 
+# # and m2 and sd2 are the same for the TF deletion
+# # (m2 - m1 allows the sign to match the effect sizes when WT is reference:
+# # + means the gene increased expr upon deletion, - means it decreased)
+# getStandardizedMeanDiffByGene <- function(.gene_idx, .cts, .info) {
+#   cat("working on", .gene_idx, 
+#       which(.gene_idx == rownames(counts_tfdel)), 
+#       "/", nrow(counts_tfdel), "\n")
+#   gdf <- bind_cols(tibble(expr = .cts[.gene_idx,]), .info)
+#   get1geneSMD <- function(del) {
+#     gdf2gen <- gdf |> filter(genotype %in% c("WT", del))
+#     gdf2gen$genotype <- droplevels(gdf2gen$genotype)
+#     # calculating SMD
+#     wt_vec <- filter(gdf2gen, genotype == "WT") |> select(expr) |> pull()
+#     del_vec <- filter(gdf2gen, genotype != "WT") |> select(expr) |> pull()
+#     m1 <- mean(wt_vec, na.rm = TRUE)
+#     sd1 <- sd(wt_vec, na.rm = TRUE)
+#     m2 <- mean(del_vec, na.rm = TRUE)
+#     sd2 <- sd(del_vec, na.rm = TRUE)
+#     s_av <- sqrt((sd1^2 + sd2^2)/2)
+#     smd <- (m2-m1)/s_av
+#     return(list("smd" = smd,
+#                 "md" = (m2 - m1),
+#                 "deletion" = gsub("delete", "", del)))
+#   }
+#   output <- map_dfr(.x = setdiff(unique(gdf$genotype), "WT"),
+#                     .f = get1geneSMD)
+#   output$gene_name <- .gene_idx
+#   return(output)
+# }
+# # # tests for getStandardizedMeanDiffByGene
+# # # cer
+# # getStandardizedMeanDiffByGene("YGR192C", counts_list$cer_TP1, infos_list$cer_TP1) |> filter(deletion == "GCR2")
+# 
+# # applies getStandardizedMeanDiffByGene to all genes
+# getStandardizedMeanDiff <- function(.cts, .info) {
+#   output <- map(rownames(.cts), \(g) {
+#     getStandardizedMeanDiffByGene(.gene_idx = g,
+#                                   .cts = .cts,
+#                                   .info = .info)
+#   }) |> purrr::reduce(.f = bind_rows)
+#   return(output)
+# }
+# 
+# SMDs <- map2(counts_list, infos_list,
+#                   .f = getStandardizedMeanDiff)
+# 
+# ### making dataframes
+# load("data_files/TFdel_DESeq2.RData")
+# 
+# # Exploring both of these and DESeq2 results to determine if
+# # differences in power btwn Scer and Spar are not seen in every model
+# # (and how they relate to "ground-truth" of SMD)
+# poisdf <- map2(TFdeldfs_pois,
+#                names(TFdeldfs_pois),
+#                \(x, y) {
+#                  x$organism <- gsub(y, pattern = "_TP[0-9]",
+#                                     replacement = "")
+#                  x$timepoint <- gsub(y, pattern = "[cer_par_]",
+#                                      replacement = "")
+#                  return(x)
+#                }) |> purrr::reduce(bind_rows) |> 
+#   rename(c("coef_pois"="coef", "pval_pois"="pval"))
+# 
+# negbindf <- map2(TFdeldfs_negbin,
+#                  names(TFdeldfs_negbin),
+#                  \(x, y) {
+#                    x$organism <- gsub(y, pattern = "_TP[0-9]",
+#                                       replacement = "")
+#                    x$timepoint <- gsub(y, pattern = "[cer_par_]",
+#                                        replacement = "")
+#                    return(x)
+#                  }) |> purrr::reduce(bind_rows) |> 
+#   rename(c("coef_negbin"="coef", "pval_negbin"="pval"))
+# 
+# SMDdf <- map2(SMDs,
+#               names(SMDs),
+#               \(x, y) {
+#                 x$organism <- gsub(y, pattern = "_TP[0-9]",
+#                                    replacement = "")
+#                 x$timepoint <- gsub(y, pattern = "[cer_par_hyc_hyp_]",
+#                                     replacement = "")
+#                 return(x)
+#               }) |> purrr::reduce(bind_rows)
+# 
+# qcdf <- left_join(poisdf,
+#                   negbindf,
+#                   by = c("gene_name", "organism", "deletion", "timepoint")) |> 
+#   left_join(SMDdf, by = c("gene_name", "organism", "deletion", "timepoint")) |> 
+#   left_join(y = TFdeldf, by = c("gene_name", "organism", "deletion", "timepoint"))
+# 
+# # Filtering for genes with high enough expression in LowN
+# load("data_files/FinalDataframe3Disp.RData")
+# qcdf <- filter(qcdf, gene_name %in% unlist(finaldf[finaldf$experiment == "LowN",
+#                                                    "gene_name"]))
+# #### QC Exploration ####
+# 
+# # are effect size estimates and SMD correlated?
+# # negbin and SMD
+# ggplot(slice_sample(filter(qcdf, pval_negbin < p_thresh), n = 10000),
+#        aes(x = smd, y = coef_negbin)) +
+#   geom_point(aes(color = coef_negbin > 0)) # certainly none go in opposite directions
+# sum(sign(qcdf$smd) != sign(qcdf$coef_negbin) & qcdf$pval_negbin < p_thresh, na.rm = TRUE)
+# # pois and SMD
+# ggplot(slice_sample(filter(qcdf, pval_pois < p_thresh), n = 10000),
+#        aes(x = smd, y = coef_pois)) +
+#   geom_point(aes(color = coef_pois > 0)) # perhaps more correlated
+# sum(sign(qcdf$smd) != sign(qcdf$coef_pois) & qcdf$pval_pois < p_thresh, na.rm = TRUE)
+# # negbin and pois
+# ggplot(slice_sample(filter(qcdf, pval_pois < p_thresh), n = 10000),
+#        aes(x = coef_negbin, y = coef_pois)) +
+#   geom_point() # nevermind, they're the same
+# identical_idxs <- map2(qcdf$coef_pois, qcdf$coef_negbin, identical) |> unlist() 
+# sum(identical_idxs) # not exact, but close. Probably stochasticity around the negbin iterative algorithm
+# # SMD and DESeq2
+# ggplot(slice_sample(filter(qcdf, padj < p_thresh), n = 10000),
+#        aes(x = smd, y = lfc)) +
+#   geom_point(aes(color = lfc > 0))
+# # pois and DESeq2
+# ggplot(filter(qcdf, padj < 0.05),
+#        aes(x = coef_pois, y = lfc)) +
+#   geom_point(aes(color = lfc > 0)) 
+# # mostly very related, but there's a group with very strong 
+# # negative effects that pois weren't calling DE:
+# source("functions_for_figure_scripts.R")
+# load("data_files/Cleaned_Counts.RData")
+# load("data_files/Cleaned_Counts_Allele.RData")
+# v_neg_genes <- filter(qcdf, ((padj < 0.05) | (pval_pois < p_thresh)) & 
+#                         coef_pois < -20)
+# v_neg_genes$deletion |> table() |> sort(decreasing = TRUE)
+# v_neg_genes$timepoint |> table() |> sort(decreasing = TRUE)
+# v_neg_genes$gene_name |> table() |> sort(decreasing = TRUE)
+# v_neg_genes |> filter(deletion == "GAT1")
+# counts_tfdel["YHR096C", sample_info_tfdel$organism == "par" &
+#                sample_info_tfdel$genotype == "SUM1delete" &
+#                sample_info_tfdel$time_point_str == "16 h, low N"] # HXT5, there are 2 replicates --- just both 0
+# plotGenesTFdel(.gene_idxs = "YHR096C", .tf = "SUM1") # This is real. SUM1 delete shuts off this gene in Spar
+# plotGenesTFdel(.gene_idxs = "YHR096C", .tf = "GAT1")
+# counts_tfdel["YBR145W", sample_info_tfdel$organism == "cer" &
+#                sample_info_tfdel$genotype == "GCN4delete" &
+#                sample_info_tfdel$time_point_str == "16 h, low N"]
+# counts_tfdel["YBL043W", sample_info_tfdel$organism == "cer" &
+#                sample_info_tfdel$genotype == "GCN4delete" &
+#                sample_info_tfdel$time_point_str == "16 h, low N"]
+# plotGenesTFdel(.gene_idxs = "YBR145W", .tf = "GCN4")
+# plotGenesTFdel(.gene_idxs = "YBL043W", .tf = "GCN4") # ADH5 and ECM13
+# # conclusion: these appear to be true effect sizes: these genes are shut off by these TF deletions
+# 
+# ### Case examples
+# # Are there differences in coef/pval for Scer vs Spar?
+# # MET28 TP1, no DE genes in Scer
+# # pois, pvals not adjusted for multiple testing
+# plotdf <- filter(qcdf, organism == "cer" & deletion == "MET28" & timepoint == "TP1")
+# ggplot(plotdf, aes(x = coef_pois, y = -log10(pval_pois))) +
+#   geom_point(aes(color = pval_pois < p_thresh)) +
+#   xlim(c(-10, 10))
+# plotdf <- filter(qcdf, organism == "par" & deletion == "MET28" & timepoint == "TP1")
+# ggplot(plotdf, aes(x = coef_pois, y = -log10(pval_pois))) +
+#   geom_point(aes(color = pval_pois < p_thresh)) +
+#   xlim(c(-10, 10)) # magnitudes are genuniely smaller for Scer
+# filter(qcdf, organism == "cer" & deletion == "MET28" & timepoint == "TP1" &
+#          pval_pois < p_thresh & abs(coef_pois) > coef_thresh) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "MET28" & timepoint == "TP1" &
+#          pval_pois < p_thresh & abs(coef_pois) > coef_thresh) |> nrow()
+# # DESeq2
+# plotdf <- filter(qcdf, organism == "cer" & deletion == "MET28" & timepoint == "TP1")
+# ggplot(plotdf, aes(x = lfc, y = -log10(padj))) +
+#   geom_point(aes(color = padj < p_thresh)) +
+#   xlim(c(-10, 10)) +
+#   ylim(c(0, 30))
+# plotdf <- filter(qcdf, organism == "par" & deletion == "MET28" & timepoint == "TP1")
+# ggplot(plotdf, aes(x = lfc, y = -log10(padj))) +
+#   geom_point(aes(color = padj < p_thresh)) +
+#   xlim(c(-10, 10)) +
+#   ylim(c(0, 30))
+# filter(qcdf, organism == "cer" & deletion == "MET28" & timepoint == "TP1" &
+#          padj < p_thresh & abs(lfc) > coef_thresh) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "MET28" & timepoint == "TP1" &
+#          padj < p_thresh & abs(lfc) > coef_thresh) |> nrow()
+# 
+# # YAP1 TP3, few DE genes in Spar
+# # pois, pvals not adjusted for multiple testing
+# plotdf <- filter(qcdf, organism == "cer" & deletion == "YAP1" & timepoint == "TP3")
+# ggplot(plotdf, aes(x = coef_pois, y = -log10(pval_pois))) +
+#   geom_point(aes(color = pval_pois < p_thresh)) +
+#   xlim(c(-10, 10))
+# plotdf <- filter(qcdf, organism == "par" & deletion == "YAP1" & timepoint == "TP3")
+# ggplot(plotdf, aes(x = coef_pois, y = -log10(pval_pois))) +
+#   geom_point(aes(color = pval_pois < p_thresh)) +
+#   xlim(c(-10, 10)) # I don't see a diference
+# filter(qcdf, organism == "cer" & deletion == "YAP1" & timepoint == "TP3" &
+#          pval_pois < p_thresh & abs(coef_pois) > coef_thresh) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "YAP1" &  timepoint == "TP3" &
+#          pval_pois < p_thresh & abs(coef_pois) > coef_thresh) |> nrow() # but there is a difference, Spar has 1/4 as many
+# # DESeq2
+# plotdf <- filter(qcdf, organism == "cer" & deletion == "YAP1" & timepoint == "TP3")
+# ggplot(plotdf, aes(x = lfc, y = -log10(padj))) +
+#   geom_point(aes(color = padj < p_thresh)) +
+#   xlim(c(-10, 10)) +
+#   ylim(c(0, 30))
+# plotdf <- filter(qcdf, organism == "par" & deletion == "YAP1" & timepoint == "TP3")
+# ggplot(plotdf, aes(x = lfc, y = -log10(padj))) +
+#   geom_point(aes(color = padj < p_thresh)) +
+#   xlim(c(-10, 10)) +
+#   ylim(c(0, 30))
+# filter(qcdf, organism == "cer" & deletion == "YAP1" &
+#          padj < p_thresh & abs(lfc) > coef_thresh) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "YAP1" &
+#          padj < p_thresh & abs(lfc) > coef_thresh) |> nrow()
+# 
+# # How do these vals compare to "gold standard" SMD?
+# # Are there more high SMD values for the species with more DE Genes?
+# ggplot(filter(qcdf, (deletion == "MET28" & timepoint == "TP1") |
+#                 (deletion == "YAP1" & timepoint == "TP3")), aes(x = interaction(organism, deletion),
+#                    y = smd)) +
+#   geom_violin(aes(fill = smd < 0))
+# filter(qcdf, organism == "cer" & deletion == "YAP1" & timepoint == "TP3" &
+#          abs(smd) > 3) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "YAP1" & timepoint == "TP3" &
+#          abs(smd) > 3) |> nrow()
+# filter(qcdf, organism == "cer" & deletion == "MET28" & timepoint == "TP1" &
+#          abs(smd) > 3) |> nrow()
+# filter(qcdf, organism == "par" & deletion == "MET28" & timepoint == "TP1" &
+#          abs(smd) > 3) |> nrow()
+# # There are indeed smaller SMDs in the organism without DE genes
+# 
+# # Mean difference Scer vs Spar
+# # MD is related to expression level, so these will have to be
+# # paired observations for each gene in Scer and Spar
+# # MET28
+# plotdf <- filter(qcdf, deletion == "MET28" & timepoint == "TP1") |> 
+#   pivot_wider(id_cols = "gene_name", names_from = "organism", values_from = "md")
+# ggplot(plotdf, aes(x = log2(abs(cer) + 1),
+#                    y = log2(abs(par) + 1))) + 
+#   geom_hex() +
+#   geom_abline(slope = 1, intercept = 0, color = "red") # Spar has higher (magnitude) MDs
+# sum(abs(plotdf$cer) > abs(plotdf$par))
+# sum(abs(plotdf$cer) < abs(plotdf$par))
+# # YAP1
+# plotdf <- filter(qcdf, deletion == "YAP1" & timepoint == "TP3") |> 
+#   pivot_wider(id_cols = "gene_name", names_from = "organism", values_from = "md")
+# ggplot(plotdf, aes(x = log2(abs(cer) + 1),
+#                    y = log2(abs(par) + 1))) + 
+#   geom_hex() +
+#   geom_abline(slope = 1, intercept = 0, color = "red") # Scer has higher (magnitude MDs)
+# sum(abs(plotdf$cer) > abs(plotdf$par))
+# sum(abs(plotdf$cer) < abs(plotdf$par))
+# 
+# #### Supplemental figure: TFdel power QC ####
+# # TODO: supplemental plot once you've run all deletions/organisms/timepoints
+# # showing that the TFdeldf, pois, glm.nb, and SMD counts for numbers of DE genes
+# # Show the same divergence in nDE genes between species
+# 
+# # DESeq2 and glm pois make largely similar estimates of fold change
+# library(ggExtra)
+# plotdf <- filter(drop_na(qcdf), (pval_pois < p_thresh) | (padj < 0.05))
+# p <- ggplot(plotdf, 
+#        aes(x = coef_pois, y = lfc)) + 
+#   geom_point(aes(color = if_else(padj < 0.05,
+#                                  true = if_else(pval_pois < p_thresh,
+#                                                 true = "sig both",
+#                                                 false = "sig DESeq2"),
+#                                  false = if_else(pval_pois < p_thresh,
+#                                                  true = "sig glm",
+#                                                  false = "nonsig both")))) +
+#   theme(legend.title = element_blank(),
+#         legend.position = "bottom") +
+#   ggtitle(paste0("n = ", nrow(plotdf)))
+# pdf("../../aligning_the_molecular_phenotype/paper_figures/Supplement/glmVsDESeq2.pdf",
+#     width = 7, height = 7)
+# ggMarginal(p, groupColour = TRUE, groupFill = TRUE)
+# dev.off()
+# 
+# # cluster with very negative fold change that's only sig in DESeq2 
+# # is of genes with fully 0 counts upon TFdel:
+# table(v_neg_genes$organism) # note they happen to only be parental observations
+# plotdf <- map(1:nrow(v_neg_genes), \(i) {
+#   org <- v_neg_genes$organism[i]
+#   tfdel <- v_neg_genes$deletion[i]
+#   g <- v_neg_genes$gene_name[i]
+#   tp <- v_neg_genes$timepoint[i]
+#   tp_str <- if_else(tp == "TP1",
+#                     true = "0 h, YPD",
+#                     false = if_else(tp == "TP2",
+#                                     true = "1 h, low N",
+#                                     false = "16 h, low N"))
+#   wt_avg_expr <- counts_tfdel[g,sample_info_tfdel$organism == org &
+#                                 sample_info_tfdel$genotype == "WT" &
+#                                 sample_info_tfdel$time_point_str == tp_str] |> 
+#     mean()
+#   outdf <- tibble(gene_name = g,
+#                   organism = org,
+#                   deletion = tfdel,
+#                   timepoint = tp,
+#                   wt_avg_expr = wt_avg_expr,
+#                   expr = counts_tfdel[g,sample_info_tfdel$organism == org &
+#                                         sample_info_tfdel$genotype == paste0(tfdel, "delete") &
+#                                         sample_info_tfdel$time_point_str == tp_str])
+#   return(outdf)
+# }) |> purrr::reduce(bind_rows)
+# plotdf <- left_join(plotdf, v_neg_genes,
+#                     by = c("gene_name", "organism", "deletion", "timepoint"),
+#                     relationship = "many-to-one") |> 
+#   pivot_longer(cols = c("wt_avg_expr", "expr"), 
+#                names_to = "genotype", values_to = "expr")
+# plotdf$genotype <- if_else(plotdf$genotype == "wt_avg_expr",
+#                            true = "WT", false = "TFdel")
+# 
+# pdf("../../aligning_the_molecular_phenotype/paper_figures/Supplement/glmVsDESeq2_negGroup.pdf",
+#     width = 3, height = 2.5)
+# ggplot(plotdf, aes(x = genotype, y = expr)) +
+#   geom_line(aes(group = interaction(deletion, gene_name, timepoint, organism)),
+#             color = "#00BA38") +
+#   theme_classic() +
+#   scale_x_discrete(breaks = c("WT", "TFdel"),
+#                    labels = c("WT", "TFdel"),
+#                    limits = c("WT", "TFdel")) +
+#   ggtitle(paste0("n = ", nrow(unique(select(plotdf, deletion, gene_name, timepoint, organism)))))
+# dev.off()
+# 
+# ### Heatmap of SMD over a threshold instead of nDE genes
+# library(ComplexHeatmap)
+# library(circlize)
+# # Copy-pasted from TFdel figure script
+# parent_tf_tab <- sample_info_tfdel |> filter(time_point_str == "0 h, YPD" &
+#                                                genotype != "WT") |> 
+#   select(genotype, organism) |> table()
+# parent_goodf_tfs_tp1 <- rownames(parent_tf_tab)[apply(parent_tf_tab, 1, \(x) {all(x > 1)})] |> 
+#   gsub(pattern = "delete", replacement = "")
+# parent_goodf_tfs_tp1
+# # TFs with 2 replicates at TP3 in cer/par:
+# parent_tf_tab <- sample_info_tfdel |> filter(time_point_str == "16 h, low N" &
+#                                                genotype != "WT") |> 
+#   select(genotype, organism) |> table()
+# parent_goodf_tfs_tp3 <- rownames(parent_tf_tab)[apply(parent_tf_tab, 1, \(x) {all(x > 1)})] |> 
+#   gsub(pattern = "delete", replacement = "")
+# parent_goodf_tfs_tp3
+# # TFs with 2 replicates at TP1 in hyc/hyp:
+# hybrid_tf_tab <- sample_info_tfdel_allele |> filter(time_point_str == "0 h, YPD" &
+#                                                       genotype != "WT") |> 
+#   select(genotype, allele) |> table()
+# hybrid_goodf_tfs_tp1 <- rownames(hybrid_tf_tab)[apply(hybrid_tf_tab, 1, \(x) {all(x > 1)})] |> 
+#   gsub(pattern = "delete", replacement = "")
+# hybrid_goodf_tfs_tp1
+# # TFs with 2 replicates at TP2 in hyc/hyp:
+# hybrid_tf_tab <- sample_info_tfdel_allele |> filter(time_point_str == "1 h, low N" &
+#                                                       genotype != "WT") |> 
+#   select(genotype, allele) |> table()
+# hybrid_goodf_tfs_tp2 <- rownames(hybrid_tf_tab)[apply(hybrid_tf_tab, 1, \(x) {all(x > 1)})] |> 
+#   gsub(pattern = "delete", replacement = "")
+# hybrid_goodf_tfs_tp2
+# # TFs with 2 replicates at TP3 in hyc/hyp:
+# hybrid_tf_tab <- sample_info_tfdel_allele |> filter(time_point_str == "16 h, low N" &
+#                                                       genotype != "WT") |> 
+#   select(genotype, allele) |> table()
+# hybrid_goodf_tfs_tp3 <- rownames(hybrid_tf_tab)[apply(hybrid_tf_tab, 1, \(x) {all(x > 1)})] |> 
+#   gsub(pattern = "delete", replacement = "")
+# hybrid_goodf_tfs_tp3
+# # TFs with 2 replicates in parents for both timepoints:
+# goodTFs <- intersect(parent_goodf_tfs_tp1, parent_goodf_tfs_tp3)
+# goodTFs
+# # rows missing from hybrid TP1:
+# setdiff(goodTFs, hybrid_goodf_tfs_tp1)
+# # rows missing from hybrid TP3:
+# setdiff(goodTFs, hybrid_goodf_tfs_tp3)
+# 
+# effectsdf <- SMDdf |> 
+#   filter(abs(smd) > 3 & 
+#            timepoint != "TP2" &
+#            deletion %in% goodTFs) |> 
+#   group_by(deletion, organism, timepoint) |> 
+#   summarise(nGenes = n()) |> 
+#   pivot_wider(id_cols = c("deletion"), 
+#               names_from = c("organism", "timepoint"), 
+#               values_from = "nGenes") |> 
+#   ungroup()
+# effects_mat <- select(effectsdf, -deletion) |> as.matrix()
+# rownames(effects_mat) <- effectsdf$deletion
+# effects_mat[is.na(effects_mat)] <- 0 # because we already eliminated TFs without replicates, any NAs come from missing combinations in group_by
+# # adding back NAs for missing TFs in the hybrid
+# # TP1
+# effects_mat[rownames(effects_mat) %in% setdiff(goodTFs, hybrid_goodf_tfs_tp1), 
+#             colnames(effects_mat) %in% c("hyc_TP1", "hyp_TP1")] <- NA
+# # # TP2
+# # effects_mat[rownames(effects_mat) %in% setdiff(goodTFs, hybrid_goodf_tfs_tp2), 
+# #             colnames(effects_mat) %in% c("hyc_TP2", "hyp_TP2")] <- NA
+# # TP3
+# effects_mat[rownames(effects_mat) %in% setdiff(goodTFs, hybrid_goodf_tfs_tp3), 
+#             colnames(effects_mat) %in% c("hyc_TP3", "hyp_TP3")] <- NA
+# 
+# col_fun <- colorRamp2(c(0, 50, 300), c("blue", "yellow", "red"))
+# p <- Heatmap(effects_mat, col = col_fun, na_col = "grey80",
+#              column_order = c("cer_TP1", "par_TP1", "cer_TP3", "par_TP3", 
+#                               "hyc_TP1", "hyp_TP1", "hyc_TP3", "hyp_TP3"),
+#              # row_order = tf_order,
+#              cell_fun = function(j, i, x, y, width, height, fill) {
+#                output <- if_else(!(is.na(effects_mat[i, j])), 
+#                                  true = as.character(effects_mat[i, j]), 
+#                                  false = "-")
+#                grid.text(output, x, y, gp = gpar(fontsize = 10))
+#              })
+# 
+# pdf("../../aligning_the_molecular_phenotype/paper_figures/Supplement/TFdel_SMD_heatmap.pdf", 
+#     width = 5, height = 8)
+# p
+# dev.off()
+# 
+# # TODO: DESeq2 seems to have many more significant negative
+# # log2 fold change effects than positive ones, 
+# # Is this also true for SMD of a large enough magnitude?
+# 
+# # saving
+# save(TFdeldfs_pois,
+#      TFdeldfs_negbin,
+#      SMDs, SMDdf, poisdf, 
+#      qcdf, file = "data_files/QC_TFdel.RData")
+# load(file = "data_files/QC_TFdel.RData")
+# 
+# #### effect size distributions by TF ####
+# # do any TFs have more nsig than others within each dataset?
+# plotlist <- vector(mode = "list", length = length(TFdeldfs_pois))
+# for (i in c(1:length(TFdeldfs_pois))) {
+#   df <- TFdeldfs_pois[[i]]
+#   plotdf <- df |> filter(abs(coef) > 0.5 & pval < p_thresh) |> 
+#     group_by(deletion)
+#   p <- ggplot(plotdf, aes(x = deletion)) +
+#     geom_bar(aes(fill = deletion)) +
+#     ggtitle(names(TFdeldfs_pois)[i]) +
+#     theme(legend.position = "none", 
+#           axis.text.x = element_text(angle = 90)) +
+#     ylim(c(0, 1600))
+#   plotlist[[i]] <- p
+# }
+# ggarrange(plotlist = plotlist, ncol = 4, nrow = 2)
+# 
+# # both barkai and redhuis have the discrepancy of par having ~2x as many DE as cer
+# # hybrids don't, so this isn't an alignment issue
+# # no obvious single TFs that are driving the pattern
+# # barkai vs redhuis alingment have slight differences in power, 
+# # but are mostly similar, especially hybrid 
+# # (except TEC1, which has more DE in redhuis hyc and hyp)
+# 
+# # but at some point, I didn't have this issue
+# 
+# #### comparing models ####
+# 
+# # overall n DE gene/TF combinations
+# # cer pois, no interaction
+# sum(TFdeldfs_pois$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_pois$redhuisdf_cer$coef) > 0.25)
+# # par pois, no interaction
+# sum(TFdeldfs_pois$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_pois$redhuisdf_par$coef) > 0.25) # wait that's not that many more
+# # cer pois, with interaction
+# sum(TFdeldfs_poisint$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_poisint$redhuisdf_cer$coef) > 0.25)
+# # par pois, with interaction
+# sum(TFdeldfs_poisint$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_poisint$redhuisdf_par$coef) > 0.25)
+# # extreme values only
+# # cer pois, no interaction
+# sum(TFdeldfs_pois$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_pois$redhuisdf_cer$coef) > 2)
+# # par pois, no interaction
+# sum(TFdeldfs_pois$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_pois$redhuisdf_par$coef) > 2) # ah now it's over twice as many
+# # cer pois, with interaction
+# sum(TFdeldfs_poisint$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_poisint$redhuisdf_cer$coef) > 2)
+# # par pois, with interaction
+# sum(TFdeldfs_poisint$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_poisint$redhuisdf_par$coef) > 2)
+# # cer negbin, no interaction
+# sum(TFdeldfs_negbin$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_negbin$redhuisdf_cer$coef) > 2)
+# # par negbin, no interaction
+# sum(TFdeldfs_negbin$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_negbin$redhuisdf_par$coef) > 2, na.rm = TRUE)
+# # cer negbin, with interaction
+# sum(TFdeldfs_negbinint$redhuisdf_cer$pval < p_thresh & 
+#       abs(TFdeldfs_negbinint$redhuisdf_cer$coef) > 2)
+# # par negbin, with interaction
+# sum(TFdeldfs_negbinint$redhuisdf_par$pval < p_thresh & 
+#       abs(TFdeldfs_negbinint$redhuisdf_par$coef) > 2, na.rm = TRUE)
+# 
+# # conclusions: no obvious solution, but par seems to have more extreme effect sizes,
+# # especially in poisson models and models without interaction terms
+# 
+# ### density plots of effect sizes in cer versus par
+# # SMD plot for ground-truth reference
+# # all SMDs, regardless of size
+# plotdf <- SMDdf |> pivot_longer(cols = c("cer", "par"),
+#                                 names_to = "species",
+#                                 values_to = "smd") 
+# ggplot(plotdf, aes(x = smd)) + 
+#   geom_density(aes(fill = species), alpha = 0.5) # par has stronger effects in both directions, not just lower tail
+# 
+# # now models
+# # pois, no interaction
+# plotdf <- TFdeldfs_pois$redhuisdf_cer |> 
+#   #filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "cer")
+# plotdf <- TFdeldfs_pois$redhuisdf_par |> 
+#   #filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "par") |> 
+#   bind_rows(y = plotdf)
+# ggplot(plotdf, aes(x = (-log(abs(coef)))*sign(coef))) + 
+#   geom_density(aes(fill = species), alpha = 0.5) +
+#   geom_vline(xintercept = 1) +
+#   geom_vline(xintercept = -1)
+# # okayyy there is a bias for paradoxus to have more negative strong effect sizes
+# # this becomes overwhelming for stronger than effect sizes less than -1:
+# ggplot(plotdf, aes(x = coef)) + 
+#   geom_density(aes(fill = species), alpha = 0.5) +
+#   geom_vline(xintercept = 1) +
+#   geom_vline(xintercept = -1) +
+#   ylim(c(0, 0.1)) + xlim(c(-5, 5))
+# 
+# # pois, with interaction
+# plotdf <- TFdeldfs_poisint$redhuisdf_cer |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "cer")
+# plotdf <- TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "par") |> 
+#   bind_rows(y = plotdf)
+# ggplot(plotdf, aes(x = coef)) + 
+#   geom_density(aes(fill = species), alpha = 0.5) +
+#   geom_vline(xintercept = 1) +
+#   geom_vline(xintercept = -1)
+# 
+# # negbin, no interaction
+# plotdf <- TFdeldfs_negbin$redhuisdf_cer |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "cer")
+# plotdf <- TFdeldfs_negbin$redhuisdf_par |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "par") |> 
+#   bind_rows(y = plotdf)
+# ggplot(plotdf, aes(x = coef)) + 
+#   geom_density(aes(fill = species), alpha = 0.5) +
+#   geom_vline(xintercept = 1) +
+#   geom_vline(xintercept = -1)
+# 
+# # negbin, with interaction
+# plotdf <- TFdeldfs_negbinint$redhuisdf_cer |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "cer")
+# plotdf <- TFdeldfs_negbinint$redhuisdf_par |> 
+#   filter(pval < p_thresh) |> 
+#   select(gene_name, deletion, coef) |> 
+#   mutate(species = "par") |> 
+#   bind_rows(y = plotdf)
+# ggplot(plotdf, aes(x = coef)) + 
+#   geom_density(aes(fill = species), alpha = 0.5) +
+#   geom_vline(xintercept = 1) +
+#   geom_vline(xintercept = -1)
+# 
+# 
+# #### finding a better coef thresh cutoff ####
+# 
+# # seems like I'm being too stringent with my effect size cutoff
+# # use SMD of ~1 to figure out what the corresponding coef_thresh would be
+# # and use that instead
+# # (or look back at those coef vs smd plots and see where coef starts to "fan out"
+# # i.e. becomes unrelated to smd)
+# 
+# # control: no accounting for time, should be equivalent to smd
+# plotdf <- left_join(SMDdf, 
+#                     rename(TFdeldfs_notime$redhuisdf_cer,
+#                            c("coef_cer"="coef",
+#                              "pval_cer"="pval")),
+#                     by = join_by(gene_name, deletion)) |> 
+#   left_join(y = rename(TFdeldfs_notime$redhuisdf_par,
+#                        c("coef_par"="coef",
+#                          "pval_par"="pval")),
+#             by = join_by(gene_name, deletion))
+# 
+# ggplot(slice_sample(plotdf, n = 10000), 
+#        aes(x = cer,
+#            y = coef_cer)) +
+#   geom_point(aes(color = pval_cer < p_thresh)) +
+#   geom_vline(xintercept = c(-1, 1))
+# 
+# ### smd versus coef in pois with interaction (most realistic model)
+# 
+# plotdf <- left_join(SMDdf, 
+#                     rename(TFdeldfs_poisint$redhuisdf_cer,
+#                            c("coef_cer"="coef",
+#                              "pval_cer"="pval")),
+#                     by = join_by(gene_name, deletion)) |> 
+#   left_join(y = rename(TFdeldfs_poisint$redhuisdf_par,
+#                        c("coef_par"="coef",
+#                          "pval_par"="pval")),
+#             by = join_by(gene_name, deletion))
+# 
+# # cer
+# ggplot(slice_sample(plotdf, n = 10000), 
+#        aes(x = cer,
+#            y = coef_cer)) +
+#   geom_point(aes(color = pval_cer < p_thresh)) +
+#   geom_vline(xintercept = c(-1, 1)) + ylim(c(-5, 5))
+# 
+# # par
+# ggplot(slice_sample(plotdf, n = 10000), 
+#        aes(x = par,
+#            y = coef_par)) +
+#   geom_point(aes(color = pval_par < p_thresh)) +
+#   geom_vline(xintercept = c(-1, 1)) + ylim(c(-5, 5))
+# 
+# 
+# #### barplots ####
+# coef_thresh <- 0.5
+# load("data_files/modules.RData")
+# plotTFBarplots <- function(.deldf_cer, .deldf_par, .m_genedf,
+#                            .useLiteralColors = TRUE) {
+#   common_TFs <- intersect(unique(.deldf_cer$deletion), unique(.deldf_par$deletion))
+#   plotdf_cer <-  .deldf_cer |> left_join(y = select(.m_genedf, gene_name, CCM_color),
+#                                          by = "gene_name")
+#   plotdf_cer$sig <- apply(plotdf_cer, 1, \(x) {
+#     coeff <- x["coef"] |> as.numeric()
+#     pvalue <- x["pval"] |> as.numeric()
+#     if (coeff > coef_thresh & pvalue < p_thresh) {
+#       return("up")
+#     }
+#     if (coeff < -coef_thresh & pvalue < p_thresh) {
+#       return("down")
+#     }
+#     else {
+#       return("none")
+#     }
+#   })
+#   # repeat for paradoxus
+#   plotdf_par <-  .deldf_par |> left_join(y = select(.m_genedf, gene_name, CCM_color),
+#                                          by = "gene_name")
+#   plotdf_par$sig <- apply(plotdf_par, 1, \(x) {
+#     coeff <- x["coef"] |> as.numeric()
+#     pvalue <- x["pval"] |> as.numeric()
+#     if (coeff > coef_thresh & pvalue < p_thresh) {
+#       return("up") 
+#     }
+#     if (coeff < -coef_thresh & pvalue < p_thresh) {
+#       return("down")
+#     }
+#     else {
+#       return("none")
+#     }
+#   })
+#   # separating genes found in both species from genes that are species unique
+#   plotdf_common <- bind_rows(select(plotdf_cer, gene_name, CCM_color, deletion, sig), 
+#                              select(plotdf_par, gene_name, CCM_color, deletion, sig)) |> filter(sig != "none")
+#   plotdf_common <- plotdf_common[duplicated(plotdf_common),] |> 
+#     mutate(idx =  paste0(gene_name, deletion))
+#   # filtering out these gene/TF combinations in cer and par
+#   plotdf_cer <- plotdf_cer |> filter(sig != "none") |> 
+#     mutate(idx = paste0(gene_name, deletion)) |>
+#     filter(!(idx %in% plotdf_common$idx))
+#   plotdf_par <- plotdf_par |> filter(sig != "none") |> 
+#     mutate(idx = paste0(gene_name, deletion)) |>
+#     filter(!(idx %in% plotdf_common$idx))
+#   if (.useLiteralColors) {
+#     plotdf_cer$CCM_color <- factor(plotdf_cer$CCM_color) |> relevel(ref = "none")
+#     plotdf_par$CCM_color <- factor(plotdf_par$CCM_color) |> relevel(ref = "none")
+#     plotdf_common$CCM_color <- factor(plotdf_common$CCM_color) |> relevel(ref = "none")
+#   }
+#   # counting
+#   plotdf_cer <- plotdf_cer |> 
+#     group_by(CCM_color, deletion) |> 
+#     summarise(up = sum(sig == "up"), down = -sum(sig == "down"))
+#   plotdf_par <- plotdf_par |> 
+#     group_by(CCM_color, deletion) |> 
+#     summarise(up = sum(sig == "up"), down = -sum(sig == "down"))
+#   plotdf_common <- plotdf_common |> 
+#     group_by(CCM_color, deletion) |> 
+#     summarise(up = sum(sig == "up"), down = -sum(sig == "down"))
+#   # getting overall max, to ensure equivalent y-axes between plots
+#   eachtf <- bind_rows(mutate(plotdf_cer, plot = "cer"),
+#                       mutate(plotdf_par, plot = "par"),
+#                       mutate(plotdf_common, plot = "common")) |> 
+#     group_by(deletion, plot) |> 
+#     summarise(up = sum(up), down = sum(down)) 
+#   max_y <- max(abs(c(eachtf$up, eachtf$down)))
+#   # plotting
+#   # genes with a TF response only in cer
+#   p_cer <- plotdf_cer |> 
+#     ggplot(aes(x = deletion, y = up, fill = CCM_color)) +
+#     geom_col(position = "stack") +
+#     geom_col(aes(y = down), position = "stack") + 
+#     geom_hline(yintercept = 0) +
+#     ylab("") +
+#     xlab("Transcription Factor Deletion") +
+#     scale_x_discrete(limits = common_TFs, labels = common_TFs) +
+#     #theme_classic() + 
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "none") + 
+#     ggtitle("genes only regulated in S. cereivisiae") +
+#     ylim(c(-max_y - 5, max_y + 5))
+#   # genes with a TF response only in par
+#   p_par <- plotdf_par |> 
+#     ggplot(aes(x = deletion, y = up, fill = CCM_color)) +
+#     geom_col(position = "stack") +
+#     geom_col(aes(y = down), position = "stack") + 
+#     geom_hline(yintercept = 0) +
+#     ylab("") +
+#     xlab("Transcription Factor Deletion") +
+#     scale_x_discrete(limits = common_TFs, labels = common_TFs) +
+#     #theme_classic() + 
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "none") + 
+#     ggtitle("genes only regulated in S. paradoxus") +
+#     ylim(c(-max_y - 5, max_y + 5))
+#   # genes with conserved TF responses in cer and par
+#   p_common <- plotdf_common |> 
+#     ggplot(aes(x = deletion, y = up, fill = CCM_color)) +
+#     geom_col(position = "stack") +
+#     geom_col(aes(y = down), position = "stack") + 
+#     geom_hline(yintercept = 0) +
+#     ylab("") +
+#     xlab("Transcription Factor Deletion") +
+#     scale_x_discrete(limits = common_TFs, labels = common_TFs) +
+#     #theme_classic() + 
+#     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "none") + 
+#     ggtitle("Genes with conserved regulation between species") +
+#     ylim(c(-max_y - 5, max_y + 5))
+#   if (.useLiteralColors) {
+#     p_cer <- p_cer +
+#       scale_fill_discrete(limits = plotdf_cer$CCM_color, 
+#                           type = gsub("none", "grey80", plotdf_cer$CCM_color))
+#     p_par <- p_par +
+#       scale_fill_discrete(limits = plotdf_par$CCM_color, 
+#                           type = gsub("none", "grey80", plotdf_par$CCM_color))
+#     p_common <- p_common +
+#       scale_fill_discrete(limits = plotdf_common$CCM_color, 
+#                           type = gsub("none", "grey80", plotdf_common$CCM_color)) 
+#   }
+#   return(list(cer = p_cer, par = p_par, common = p_common))
+# }
+# ### parents
+# # redhuis alignment, pois with interaction
+# barplots_redhuis_parents <- plotTFBarplots(TFdeldfs_poisint$redhuisdf_cer, 
+#                                            TFdeldfs_poisint$redhuisdf_par, module_genedf25)
+# ggarrange(plotlist = barplots_redhuis_parents, nrow = 3, ncol = 1)
+# # barkai alignment, pois with interaction
+# barplots_barkai_parents <- plotTFBarplots(TFdeldfs_poisint$barkaidf_cer, 
+#                                            TFdeldfs_poisint$barkaidf_par, module_genedf25)
+# ggarrange(plotlist = barplots_barkai_parents, nrow = 3, ncol = 1)
+# # redhuis alignment, pois no interaction
+# barplots_redhuis_parents <- plotTFBarplots(TFdeldfs_pois$redhuisdf_cer, 
+#                                            TFdeldfs_pois$redhuisdf_par, module_genedf25)
+# ggarrange(plotlist = barplots_redhuis_parents, nrow = 3, ncol = 1)
+# # barkai alignment, pois no interaction
+# barplots_barkai_parents <- plotTFBarplots(TFdeldfs_pois$barkaidf_cer, 
+#                                           TFdeldfs_pois$barkaidf_par, module_genedf25)
+# ggarrange(plotlist = barplots_barkai_parents, nrow = 3, ncol = 1)
+# ### hybrids
+# # redhuis alignment, pois with interaction
+# barplots_redhuis_hybrid <- plotTFBarplots(TFdeldfs_poisint$redhuisdf_hyc, 
+#                                            TFdeldfs_poisint$redhuisdf_hyp, module_genedf25)
+# ggarrange(plotlist = barplots_redhuis_hybrid, nrow = 3, ncol = 1)
+# # barkai alignment, pois with interaction
+# barplots_barkai_hybrid <- plotTFBarplots(TFdeldfs_poisint$barkaidf_hyc, 
+#                                           TFdeldfs_poisint$barkaidf_hyp, module_genedf25)
+# ggarrange(plotlist = barplots_barkai_hybrid, nrow = 3, ncol = 1)
+# # redhuis alignment, pois no interaction
+# barplots_redhuis_hybrid <- plotTFBarplots(TFdeldfs_pois$redhuisdf_hyc, 
+#                                            TFdeldfs_pois$redhuisdf_hyp, module_genedf25)
+# ggarrange(plotlist = barplots_redhuis_hybrid, nrow = 3, ncol = 1)
+# # barkai alignment, pois no interaction
+# barplots_barkai_hybrid <- plotTFBarplots(TFdeldfs_pois$barkaidf_hyc, 
+#                                           TFdeldfs_pois$barkaidf_hyp, module_genedf25)
+# ggarrange(plotlist = barplots_barkai_hybrid, nrow = 3, ncol = 1)
+# 
+# # conclusions: parents show same pattern regardless of which alignment/poisson formula is used
+# # hybrids have consistent DE genes in all modules across all TFs, which does not seem right
+# 
+# #### Do the hybrids really have DE genes in all modules for all TFs? ####
+# 
+# # parents
+# # pois with interaction, at least one sig gene x TF combo
+# # cer sig
+# random_gene_tf <- TFdeldfs_poisint$redhuisdf_cer |> 
+#   filter(abs(coef) > 1 & pval < p_thresh) |> 
+#   slice_sample(n = 1) |> select(gene_name, deletion)
+# genedf <- bind_cols(tibble(expr = redhuis_cts$cer[,random_gene_tf$gene_name]), redhuis_info$cer)
+# sigGenotypes <- TFdeldfs_negbin$redhuisdf_cer |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# # par sig
+# random_gene_tf <- TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(abs(coef) > 1 & pval < p_thresh) |> 
+#   slice_sample(n = 1) |> select(gene_name, deletion)
+# TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == random_gene_tf$gene_name & 
+#            deletion == random_gene_tf$deletion)
+# genedf <- bind_cols(tibble(expr = redhuis_cts$par[,random_gene_tf$gene_name]), redhuis_info$par)
+# sigGenotypes <- TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# 
+# # TODO: why does YHL035C have a coef of 1 in AFT1delete, but there are
+# # plenty of other genotypes that appear to have the same effect 
+# # (ARG81/GLN3/PHD1 for example) that have small or negative effect sizes?
+# # TODO: check if notime model helps with this
+# genedf <- bind_cols(tibble(expr = redhuis_cts$par[,"YHL035C"]), redhuis_info$par)
+# ggplot(filter(genedf, genotype %in% c("WT", paste0(c("AFT1", "ARG81", "GLN3", "PHD1"), "delete"))), 
+#        aes(x = genotype, y = expr)) + geom_point(aes(color = time_point_str))
+# TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == "YHL035C" & 
+#            deletion == "AFT1")
+# TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == "YHL035C" & 
+#            deletion == "ARG81")
+# TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == "YHL035C" & 
+#            deletion == "GLN3")
+# TFdeldfs_poisint$redhuisdf_par |> 
+#   filter(gene_name == "YHL035C" & 
+#            deletion == "PHD1")
+# 
+# # hybrids
+# # pois with interaction, at least one sig gene x TF combo
+# # hyc sig
+# random_gene_tf <- TFdeldfs_poisint$redhuisdf_hyc |> 
+#   filter(abs(coef) > 1 & pval < p_thresh) |> 
+#   slice_sample(n = 1) |> select(gene_name, deletion)
+# # hyc plot
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$cer[,random_gene_tf$gene_name]), redhuis_info_allele$cer)
+# sigGenotypes <- TFdeldfs_poisint$redhuisdf_hyc |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# # hyp plot
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$par[,random_gene_tf$gene_name]), redhuis_info_allele$par)
+# sigGenotypes <- TFdeldfs_poisint$redhuisdf_hyp |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# # hyp sig
+# random_gene_tf <- TFdeldfs_poisint$redhuisdf_hyp |> 
+#   filter(abs(coef) > 1 & pval < p_thresh) |> 
+#   slice_sample(n = 1) |> select(gene_name, deletion)
+# # hyp plot
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$par[,random_gene_tf$gene_name]), redhuis_info_allele$par)
+# sigGenotypes <- TFdeldfs_poisint$redhuisdf_hyp |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# # hyc plot
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$cer[,random_gene_tf$gene_name]), redhuis_info_allele$cer)
+# sigGenotypes <- TFdeldfs_poisint$redhuisdf_hyc |> 
+#   filter(gene_name == random_gene_tf$gene_name &
+#            abs(coef) > 1 & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(data = genedf, aes(x = genotype, y = expr)) +
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# 
+# 
+# 
+# #### Ensuring Hybrid LFC measures comparable to parents ####
+# 
+# # main goal: Get a measure of expression change that isn't sensitive to hybrids
+# #            having less variation between measurements than parents
+# #            (thus having larger expr change measurements than parents)
+# # I think this will be achievable using log fold change,
+# # which *I don't believe* is the same as exp(genotype coefficient) in the glm,
+# # which in the simplest case (expr ~ genotype) is just the ratio of
+# # means of expression (not the ratio of means of log2(expr)), 
+# # which would be comparable between expression levels
+# # I *believe* LFC is instead this ratio of log2(expr mutant)/log2(expr WT)
+# # but I need to verify that first
+# 
+# # TDH3 in GCR2delete is a good starting example. If this expr
+# # change isn't the same for hybrids and parents, nothing is
+# gene_idx <- "YGR192C"
+# genedf <- bind_cols(tibble(expr = redhuis_cts$cer[,gene_idx]), redhuis_info$cer) |> 
+#   filter(time_point_str == "16 h, low N")
+# genedf$genotype <- as.factor(genedf$genotype) |> relevel(ref = "WT")
+# sigGenotypes <- TFdeldfs_pois$redhuisdf_cer |> 
+#   filter(gene_name == gene_idx & abs(coef) > coef_thresh & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(genedf, aes(x = genotype, y = expr)) + 
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) + 
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# mod <- glm(expr ~ genotype, data = genedf, family = poisson(link = "log"))
+# mod$coefficients |> sort(decreasing = TRUE) # a cutoff of 1 would unfortunately still get GCR2, but that might be necessary
+# # now tf vs wt for gln3 specifically
+# genedf$p_hat <- mod$fitted.values
+# gcr2_effect_size <- mod$coefficients["genotypeGCR2delete"] |> as.numeric()
+# slope <- exp(gcr2_effect_size)
+# intercept <- mod$coefficients["(Intercept)"] |> as.numeric()
+# plotdf <- pivot_longer(genedf, cols = c(p_hat, expr))
+# ggplot(data = plotdf, aes(x = genotype, y = value)) +
+#   geom_point(aes(color = name, shape = as.factor(time_point_str))) +
+#   scale_x_discrete(breaks = NULL)
+# plotdf <- plotdf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+#   pivot_wider(id_cols = c("time_point_str", "name", "well_flask_ID"), 
+#               names_from = "genotype",
+#               values_from = "value")
+# ggplot(plotdf, aes(x = WT, y = GCR2delete)) + 
+#   geom_point(aes(color = name, shape = time_point_str)) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   geom_abline(slope = slope, intercept = intercept, color = "gold") +
+#   xlim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE))) +
+#   ylim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE)))
+# # genedf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+# #   select(expr, p_hat, genotype, well_flask_ID) |> View()
+# # mean WT:
+# genedf |> filter(genotype == "WT") |> 
+#   select(expr) |> pull() |> mean()
+# # mean GCR2 delete:
+# genedf |> filter(genotype == "GCR2delete") |> 
+#   select(expr) |> pull() |> mean()
+# # sd WT:
+# genedf |> filter(genotype == "WT") |> 
+#   select(expr) |> pull() |> sd()
+# # sd GCR2 delete:
+# genedf |> filter(genotype == "GCR2delete") |> 
+#   select(expr) |> pull() |> sd()
+# 
+# # effect size, log(mean(TFdel)/mean(WT)):
+# gcr2_effect_size
+# log(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# # log2 effect size--- a value around 1 means expr doubled
+# log2(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# log2(exp(gcr2_effect_size))
+# # "log-scale" fold change (lsfc, name pending): mean(log2(TFdel))/mean(log2(WT)):
+# mean(log2(genedf$expr[genedf$genotype == "GCR2delete"]))/mean(log2(genedf$expr[genedf$genotype == "WT"]))
+# # a decrease in expr is anything less than 1 now: lsfc(WT = 2^14, TFdel = 2^13) = 13/14 = 0.9ish
+# 
+# # repeat with par --- lower expressed and slightly smaller magnitude of expr change
+# genedf <- bind_cols(tibble(expr = redhuis_cts$par[,gene_idx]), redhuis_info$par) |> 
+#   filter(time_point_str == "16 h, low N")
+# genedf$genotype <- as.factor(genedf$genotype) |> relevel(ref = "WT")
+# sigGenotypes <- TFdeldfs_pois$redhuisdf_par |> 
+#   filter(gene_name == gene_idx & abs(coef) > coef_thresh & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(genedf, aes(x = genotype, y = expr)) + 
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) + 
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# mod <- glm(expr ~ genotype, data = genedf, family = poisson(link = "log"))
+# mod$coefficients |> sort(decreasing = TRUE) # a cutoff of 1 would unfortunately still get GCR2, but that might be necessary
+# # now tf vs wt for gln3 specifically
+# genedf$p_hat <- mod$fitted.values
+# gcr2_effect_size <- mod$coefficients["genotypeGCR2delete"] |> as.numeric()
+# slope <- exp(gcr2_effect_size)
+# intercept <- mod$coefficients["(Intercept)"] |> as.numeric()
+# plotdf <- pivot_longer(genedf, cols = c(p_hat, expr))
+# ggplot(data = plotdf, aes(x = genotype, y = value)) +
+#   geom_point(aes(color = name, shape = as.factor(time_point_str))) +
+#   scale_x_discrete(breaks = NULL)
+# plotdf <- plotdf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+#   pivot_wider(id_cols = c("time_point_str", "name", "well_flask_ID"), 
+#               names_from = "genotype",
+#               values_from = "value")
+# ggplot(plotdf, aes(x = WT, y = GCR2delete)) + 
+#   geom_point(aes(color = name, shape = time_point_str)) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   geom_abline(slope = slope, intercept = intercept, color = "gold") +
+#   xlim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE))) +
+#   ylim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE)))
+# # genedf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+# #   select(expr, p_hat, genotype, well_flask_ID) |> View()
+# # mean WT:
+# genedf |> filter(genotype == "WT") |> select(expr) |> pull() |> mean()
+# # mean GCR2delete:
+# genedf |> filter(genotype == "GCR2delete") |> select(expr) |> pull() |> mean()
+# 
+# # effect size/LFC, log(mean(TFdel)/mean(WT)):
+# gcr2_effect_size
+# log(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# # "log-scale" fold change: mean(log2(TFdel))/mean(log2(WT)):
+# mean(log2(genedf$expr[genedf$genotype == "GCR2delete"]))/mean(log2(genedf$expr[genedf$genotype == "WT"]))
+# # this is roughly the same as cer
+# 
+# #### repeat with hybrid to see if LFC/effect sizes match parents
+# # hyc
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$cer[,gene_idx]), redhuis_info_allele$cer) |> 
+#   filter(time_point_str == "16 h, low N")
+# genedf$genotype <- as.factor(genedf$genotype) |> relevel(ref = "WT")
+# sigGenotypes <- TFdeldfs_pois$redhuisdf_hyc |> 
+#   filter(gene_name == gene_idx & abs(coef) > coef_thresh & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(genedf, aes(x = genotype, y = expr)) + 
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) + 
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# mod <- glm(expr ~ genotype, data = genedf, family = poisson(link = "log"))
+# mod$coefficients |> sort(decreasing = TRUE) # a cutoff of 1 would unfortunately still get GCR2, but that might be necessary
+# # now tf vs wt for gln3 specifically
+# genedf$p_hat <- mod$fitted.values
+# gcr2_effect_size <- mod$coefficients["genotypeGCR2delete"] |> as.numeric()
+# slope <- exp(gcr2_effect_size)
+# intercept <- mod$coefficients["(Intercept)"] |> as.numeric()
+# plotdf <- pivot_longer(genedf, cols = c(p_hat, expr))
+# ggplot(data = plotdf, aes(x = genotype, y = value)) +
+#   geom_point(aes(color = name, shape = as.factor(time_point_str))) +
+#   scale_x_discrete(breaks = NULL)
+# plotdf <- plotdf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+#   pivot_wider(id_cols = c("time_point_str", "name", "well_flask_ID"), 
+#               names_from = "genotype",
+#               values_from = "value")
+# ggplot(plotdf, aes(x = WT, y = GCR2delete)) + 
+#   geom_point(aes(color = name, shape = time_point_str)) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   geom_abline(slope = slope, intercept = intercept, color = "gold") +
+#   xlim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE))) +
+#   ylim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE)))
+# # genedf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+# #   select(expr, p_hat, genotype, well_flask_ID) |> View()
+# # mean WT:
+# genedf |> filter(genotype == "WT") |> select(expr) |> pull() |> mean()
+# # mean GCR2delete:
+# genedf |> filter(genotype == "GCR2delete") |> select(expr) |> pull() |> mean()
+# 
+# # effect size, log(mean(TFdel)/mean(WT)):
+# gcr2_effect_size
+# log(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# log2(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# log2(exp(gcr2_effect_size))
+# # log fold change: mean(log2(TFdel))/mean(log2(WT)):
+# mean(log2(genedf$expr[genedf$genotype == "GCR2delete"]))/mean(log2(genedf$expr[genedf$genotype == "WT"]))
+# 
+# # repeat with hyp
+# genedf <- bind_cols(tibble(expr = redhuis_cts_allele$par[,gene_idx]), redhuis_info_allele$par) |> 
+#   filter(time_point_str == "16 h, low N")
+# genedf$genotype <- as.factor(genedf$genotype) |> relevel(ref = "WT")
+# sigGenotypes <- TFdeldfs_pois$redhuisdf_hyp |> 
+#   filter(gene_name == gene_idx & abs(coef) > coef_thresh & pval < p_thresh) |> 
+#   select(deletion) |> pull()
+# ggplot(genedf, aes(x = genotype, y = expr)) + 
+#   geom_point(aes(color = gsub("delete", "", genotype) %in% sigGenotypes)) + 
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position = "none")
+# mod <- glm(expr ~ genotype, data = genedf, family = poisson(link = "log"))
+# mod$coefficients |> sort(decreasing = TRUE) # a cutoff of 1 would unfortunately still get GCR2, but that might be necessary
+# # now tf vs wt for gln3 specifically
+# genedf$p_hat <- mod$fitted.values
+# gcr2_effect_size <- mod$coefficients["genotypeGCR2delete"] |> as.numeric()
+# slope <- exp(gcr2_effect_size)
+# intercept <- mod$coefficients["(Intercept)"] |> as.numeric()
+# plotdf <- pivot_longer(genedf, cols = c(p_hat, expr))
+# ggplot(data = plotdf, aes(x = genotype, y = value)) +
+#   geom_point(aes(color = name, shape = as.factor(time_point_str))) +
+#   scale_x_discrete(breaks = NULL)
+# plotdf <- plotdf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+#   pivot_wider(id_cols = c("time_point_str", "name", "well_flask_ID"), 
+#               names_from = "genotype",
+#               values_from = "value")
+# ggplot(plotdf, aes(x = WT, y = GCR2delete)) + 
+#   geom_point(aes(color = name, shape = time_point_str)) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   geom_abline(slope = slope, intercept = intercept, color = "gold") +
+#   xlim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE))) +
+#   ylim(c(0, max(c(plotdf$WT, plotdf$GCR2delete), na.rm = TRUE)))
+# # genedf |> filter(genotype %in% c("WT", "GCR2delete")) |> 
+# #   select(expr, p_hat, genotype, well_flask_ID) |> View()
+# # mean WT:
+# genedf |> filter(genotype == "WT") |> select(expr) |> pull() |> mean()
+# # mean GCR2delete:
+# genedf |> filter(genotype == "GCR2delete") |> select(expr) |> pull() |> mean()
+# 
+# # effect size, log(mean(TFdel)/mean(WT)):
+# gcr2_effect_size
+# log(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# log2(mean(genedf$expr[genedf$genotype == "GCR2delete"])/mean(genedf$expr[genedf$genotype == "WT"]))
+# log2(exp(gcr2_effect_size))
+# # log fold change: mean(log2(TFdel))/mean(log2(WT)):
+# mean(log2(genedf$expr[genedf$genotype == "GCR2delete"]))/mean(log2(genedf$expr[genedf$genotype == "WT"]))
+# 
+# 
+# # secondary goal: find an appropriate threshold for our chosen
+# # measure of expr change
+# # YNL065W is a good example to explore.
+# # Much stronger effect in GLN3 in hyp (somewhat in hyc)
+# # than other genotypes, but most genotypes are called sig in glms
+# gene_idx <- "YNL065W"
+# # hyp has one main regulator: GLN3
+# # Then a couple minor ones: AFT1, HAP1, MBP1, ROX1, SOK2
+# # Then a few dubious ones we wouldn't want to count: GCR2 (maybe real but v noisy), then basically all the other TFs except DAL80, PHD1, and TEC1 are called significant but they shouldn't be
+# # TODO: figure out what effect size threshold works for this gene in hyp
+# # then see if it's the same threshold that works for parents (just par for starters)
+# 
+# # Note: YNL065W no longer seems like a good example --- not 
+# # obviously more DE in GLN3delete (it's really just lowly expressed and noisy)
+```
+

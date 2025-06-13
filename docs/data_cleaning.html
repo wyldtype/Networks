@@ -245,6 +245,9 @@ $(document).ready(function () {
         <li>
   <a href="index.html">Home</a>
 </li>
+<li>
+  <a href="about.html">Functions</a>
+</li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Data Cleaning
@@ -256,9 +259,6 @@ $(document).ready(function () {
       <a href="data_cleaning.html">Import and clean count data</a>
     </li>
   </ul>
-</li>
-<li>
-  <a href="about.html">About</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -282,10 +282,10 @@ $(document).ready(function () {
 <p>Here’s where we load the 3’ tagseq samples, normalize them, and
 assemble them into a single count matrix.</p>
 <p>Working with RNAseq data published in Krieger et al. 2020</p>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2 
-##        TRUE        TRUE        TRUE        TRUE        TRUE 
-##      ggpubr    openxlsx matrixStats 
-##        TRUE        TRUE        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
+##    openxlsx matrixStats 
+##        TRUE        TRUE</code></pre>
 <div id="reading-in-tagseq-data-and-separating-allele-specific-counts"
 class="section level2">
 <h2>Reading in tagseq data and separating allele-specific counts</h2>
@@ -314,8 +314,12 @@ common_genes &lt;- intersect(gsub(&quot;^cer_&quot;, &quot;&quot;, tagseq_cer$ge
 tagseq_cer$gene &lt;- gsub(&quot;^cer_&quot;, &quot;&quot;, tagseq_cer$gene)
 tagseq_par$gene &lt;- gsub(&quot;^par_&quot;, &quot;&quot;, tagseq_par$gene)
 tagseq_cer &lt;- tagseq_cer[sapply(common_genes, \(x) which(x == tagseq_cer$gene)),]
-tagseq_par &lt;- tagseq_par[sapply(common_genes, \(x) which(x == tagseq_par$gene)),]
-sum(tagseq_cer$gene == tagseq_par$gene)</code></pre>
+rownames(tagseq_cer) &lt;- common_genes</code></pre>
+<pre><code>## Warning: Setting row names on a tibble is deprecated.</code></pre>
+<pre class="r"><code>tagseq_par &lt;- tagseq_par[sapply(common_genes, \(x) which(x == tagseq_par$gene)),]
+rownames(tagseq_par) &lt;- common_genes</code></pre>
+<pre><code>## Warning: Setting row names on a tibble is deprecated.</code></pre>
+<pre class="r"><code>sum(tagseq_cer$gene == tagseq_par$gene)</code></pre>
 <pre><code>## [1] 5359</code></pre>
 <pre class="r"><code>length(common_genes)</code></pre>
 <pre><code>## [1] 5359</code></pre>
@@ -365,16 +369,16 @@ test_cpm &lt;- countsPerMillionAllele(.cts_cer = tagseq_cer[,-1],
 ((test_count/(colSums(tagseq_cer[,-1], na.rm = TRUE) + 
                 colSums(tagseq_par[,-1], na.rm = TRUE))[test_colIdx])*1e6) %&gt;% 
   round() # what it should be</code></pre>
-<pre><code>##   GCR2_TP1_cer_P4C2_A2_G4_GS9a
-## 1                            0</code></pre>
+<pre><code>##   AFT1_TP1_cer_P4C2_B5_H10_GS9a
+## 1                            78</code></pre>
 <pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
 <pre><code>## # A tibble: 1 × 1
-##   GCR2_TP1_cer_P4C2_A2_G4_GS9a
-##                          &lt;dbl&gt;
-## 1                            0</code></pre>
+##   AFT1_TP1_cer_P4C2_B5_H10_GS9a
+##                           &lt;dbl&gt;
+## 1                           103</code></pre>
 <pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
-<pre><code>## GCR2_TP1_cer_P4C2_A2_G4_GS9a 
-##                            0</code></pre>
+<pre><code>## AFT1_TP1_cer_P4C2_B5_H10_GS9a 
+##                            78</code></pre>
 <p>Now we can calculate percent reads mapping to each allele in parental
 samples</p>
 <pre class="r"><code># 1) normalize to counts per million based on total 
@@ -475,6 +479,7 @@ counts &lt;- apply(sample_info, 1, \(x) {
     return(output)
   }
 }) |&gt; Reduce(f = cbind)
+rownames(counts) &lt;- common_genes
 cat(&quot;All gene names are the same in combined count matrix and Scer count matrix:&quot;, all(rownames(counts) == rownames(tagseq_cer)), &quot;
     \n&quot;)</code></pre>
 <pre><code>## All gene names are the same in combined count matrix and Scer count matrix: TRUE 
@@ -547,6 +552,11 @@ colnames(sample_info) &lt;- map_chr(colnames(sample_info), gsub, pattern = &quot
 sample_info$condition &lt;- paste(sample_info$genotype,
                                sample_info$time_point_num, sep=&quot;_&quot;)
 
+# also creating a condition variable that includes organism (for determining replicate samples)
+sample_info$org_gen_tp &lt;- paste(sample_info$organism,
+                                sample_info$genotype,
+                                sample_info$time_point_num, sep=&quot;_&quot;)
+
 # In case you&#39;re wondering, the collection date is when RNA was collected, 
 # NOT when the living yeast sample was collected
 # (only like 65 samples total have a collection date within 24 hours 
@@ -561,6 +571,212 @@ geneHasNAs &lt;- apply(counts, 1, function(x) {
 sum(geneHasNAs) # should have 0</code></pre>
 <pre><code>## [1] 0</code></pre>
 </div>
+<div id="renaming-replicates" class="section level2">
+<h2>Renaming replicates</h2>
+<p>Issue: well_flask_IDs, which are supposed to be the same ID for all
+three samples taken from the same well at each of the three timepoints,
+are currently slightly different for the same well. The reason is that
+there is a unique sample tag at the end of the well_flask_ID that we
+need to remove.</p>
+<p>Parent samples currently have mainly 1-2 wells labeled with the same
+well_flask_ID:</p>
+<pre class="r"><code>sample_info |&gt; filter(organism != &quot;hyb&quot;) |&gt; 
+  mutate(org_gen = paste(organism, genotype, sep = &quot;_&quot;)) |&gt;
+  select(well_flask_ID, org_gen) |&gt; 
+  table() |&gt; table() # (0s are combinations of organism/well_flask_ID/genotype that don&#39;t exist, which is common because many well flask IDs are only present in one organism or genotype)</code></pre>
+<pre><code>## 
+##     0     1     2     3 
+## 51060   349   155    51</code></pre>
+<p>And Hybrids currently have mainly 2-4:</p>
+<pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
+  select(well_flask_ID, genotype) |&gt; 
+  table() |&gt; table()</code></pre>
+<pre><code>## 
+##     0     2     4     6 
+## 11352   142   107     9</code></pre>
+<p>By the end of this section, every parental sample should still have
+at most 3 entries and most should have 3 (6 for hybrids, one for each of
+the two alleles).</p>
+<p>First of all (based on personal communication), the GS2018 samples
+(which are the majority of the WT samples) have a different
+well_flask_ID for the 1 hr sample than for 0 or 16 hr. For each row in
+the well plate (A-H), these are the numbers that are paired: 1-7, 2-8,
+3-9, 4-10, 5-11, 6-12:</p>
+<pre class="r"><code>col1 &lt;- sapply(c(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;, &quot;F&quot;, &quot;G&quot;, &quot;H&quot;), function(x) return(paste0(x, c(1:6)))) %&gt;% as.vector()
+col2 &lt;- sapply(c(&quot;A&quot;, &quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;, &quot;F&quot;, &quot;G&quot;, &quot;H&quot;), function(x) return(paste0(x, c(7:12))))  %&gt;% as.vector()
+gs2018_lookup &lt;- tibble(TP1_TP3 = col1, TP2 = col2)
+
+# arbitrarily assigning each ID its TP1/TP3 (column 1 in lookup table) value as opposed to its TP2 value
+standardizeGS2018ID &lt;- function(id) {
+  id_clipped &lt;- gsub(&quot;_WT2_GS2018&quot;, &quot;&quot;, id)
+  id_clipped &lt;- gsub(&quot;_G12_GS2018&quot;, &quot;&quot;, id_clipped)
+  id_clipped &lt;- gsub(&quot;_G6_GS2018&quot;, &quot;&quot;, id_clipped)
+  rownum &lt;- c(which(gs2018_lookup$TP1_TP3 == id_clipped), which(gs2018_lookup$TP2 == id_clipped))
+  new_id &lt;- gsub(gs2018_lookup$TP2[rownum], gs2018_lookup$TP1_TP3[rownum], id)
+  return(new_id)
+}
+# tests for standardizeGS2018ID
+standardizeGS2018ID(&quot;G8_G12_GS2018&quot;)</code></pre>
+<pre><code>## [1] &quot;G2_G12_GS2018&quot;</code></pre>
+<p>Before applying:</p>
+<pre class="r"><code>cat(&quot;Parent samples (all 1s and 2s):\n&quot;)</code></pre>
+<pre><code>## Parent samples (all 1s and 2s):</code></pre>
+<pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
+  select(well_flask_ID) |&gt; table() </code></pre>
+<pre><code>## well_flask_ID
+##  A1_G6_GS2018  A2_G6_GS2018  A7_G6_GS2018  A8_G6_GS2018  B1_G6_GS2018 
+##             2             2             1             1             2 
+##  B2_G6_GS2018  B7_G6_GS2018  B8_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018 
+##             2             1             1             2             2 
+##  C7_G6_GS2018  C8_G6_GS2018  D1_G6_GS2018  D2_G6_GS2018  D7_G6_GS2018 
+##             1             1             2             2             1 
+##  D8_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 E7_G12_GS2018 E8_G12_GS2018 
+##             1             2             2             1             1 
+## F1_G12_GS2018 F2_G12_GS2018 F7_G12_GS2018 F8_G12_GS2018 G1_G12_GS2018 
+##             2             2             1             1             2 
+## G2_G12_GS2018 G7_G12_GS2018 G8_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
+##             2             1             1             1             2 
+## H7_G12_GS2018 H8_G12_GS2018 
+##             1             1</code></pre>
+<pre class="r"><code>cat(&quot;Hybrid samples (all 2s and 4s):\n&quot;)</code></pre>
+<pre><code>## Hybrid samples (all 2s and 4s):</code></pre>
+<pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
+  select(well_flask_ID) |&gt; table()</code></pre>
+<pre><code>## well_flask_ID
+## A10_G12_GS2018 A11_G12_GS2018 A12_G12_GS2018  A3_G12_GS2018  A4_G12_GS2018 
+##              2              2              2              4              4 
+##  A5_G12_GS2018  A6_G12_GS2018  A9_G12_GS2018 B10_G12_GS2018 B11_G12_GS2018 
+##              4              4              2              2              2 
+## B12_G12_GS2018  B3_G12_GS2018  B4_G12_GS2018  B5_G12_GS2018  B6_G12_GS2018 
+##              2              4              4              4              4 
+##  B9_G12_GS2018 C10_G12_GS2018 C11_G12_GS2018 C12_G12_GS2018  C3_G12_GS2018 
+##              2              2              2              2              4 
+##  C4_G12_GS2018  C5_G12_GS2018  C6_G12_GS2018  C9_G12_GS2018 D10_G12_GS2018 
+##              4              4              4              2              2 
+## D11_G12_GS2018 D12_G12_GS2018  D3_G12_GS2018  D4_G12_GS2018  D5_G12_GS2018 
+##              2              2              4              4              4 
+##  D6_G12_GS2018  D9_G12_GS2018 E10_WT2_GS2018 E11_WT2_GS2018 E12_WT2_GS2018 
+##              4              2              2              2              2 
+##  E3_WT2_GS2018  E4_WT2_GS2018  E5_WT2_GS2018  E6_WT2_GS2018  E9_WT2_GS2018 
+##              4              4              4              4              2 
+## F10_WT2_GS2018 F11_WT2_GS2018 F12_WT2_GS2018  F3_WT2_GS2018  F4_WT2_GS2018 
+##              2              2              2              4              4 
+##  F5_WT2_GS2018  F6_WT2_GS2018  F9_WT2_GS2018 G10_WT2_GS2018 G11_WT2_GS2018 
+##              4              4              2              2              2 
+## G12_WT2_GS2018  G3_WT2_GS2018  G4_WT2_GS2018  G5_WT2_GS2018  G6_WT2_GS2018 
+##              2              4              4              4              4 
+##  G9_WT2_GS2018 H10_WT2_GS2018  H3_WT2_GS2018  H4_WT2_GS2018  H9_WT2_GS2018 
+##              2              2              4              4              2</code></pre>
+<p>Applying to GS2018 samples:</p>
+<pre class="r"><code>GS2018_idxs &lt;- grepl(&quot;GS2018&quot;, sample_info$well_flask_ID)
+sample_info$well_flask_ID[GS2018_idxs] &lt;- sapply(sample_info$well_flask_ID[GS2018_idxs], standardizeGS2018ID)</code></pre>
+<p>After applying:</p>
+<pre class="r"><code>cat(&quot;Parent samples (should have 3, except for H1, which is missing a timepoint):\n&quot;)</code></pre>
+<pre><code>## Parent samples (should have 3, except for H1, which is missing a timepoint):</code></pre>
+<pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
+  select(well_flask_ID) |&gt; table() </code></pre>
+<pre><code>## well_flask_ID
+##  A1_G6_GS2018  A2_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018  C1_G6_GS2018 
+##             3             3             3             3             3 
+##  C2_G6_GS2018  D1_G6_GS2018  D2_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 
+##             3             3             3             3             3 
+## F1_G12_GS2018 F2_G12_GS2018 G1_G12_GS2018 G2_G12_GS2018 H1_G12_GS2018 
+##             3             3             3             3             2 
+## H2_G12_GS2018 
+##             3</code></pre>
+<pre class="r"><code>cat(&quot;Hybrid samples (should have 6):\n&quot;)</code></pre>
+<pre><code>## Hybrid samples (should have 6):</code></pre>
+<pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
+  select(well_flask_ID) |&gt; table()</code></pre>
+<pre><code>## well_flask_ID
+## A3_G12_GS2018 A4_G12_GS2018 A5_G12_GS2018 A6_G12_GS2018 B3_G12_GS2018 
+##             6             6             6             6             6 
+## B4_G12_GS2018 B5_G12_GS2018 B6_G12_GS2018 C3_G12_GS2018 C4_G12_GS2018 
+##             6             6             6             6             6 
+## C5_G12_GS2018 C6_G12_GS2018 D3_G12_GS2018 D4_G12_GS2018 D5_G12_GS2018 
+##             6             6             6             6             6 
+## D6_G12_GS2018 E3_WT2_GS2018 E4_WT2_GS2018 E5_WT2_GS2018 E6_WT2_GS2018 
+##             6             6             6             6             6 
+## F3_WT2_GS2018 F4_WT2_GS2018 F5_WT2_GS2018 F6_WT2_GS2018 G3_WT2_GS2018 
+##             6             6             6             6             6 
+## G4_WT2_GS2018 G5_WT2_GS2018 G6_WT2_GS2018 H3_WT2_GS2018 H4_WT2_GS2018 
+##             6             6             6             6             6</code></pre>
+<pre class="r"><code># hybrids should have 6, 2 alleles x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint</code></pre>
+<p>Now we can get rid of the “GS” part of the rep name, which can be
+different for the same sample at different timepoints and replacing it
+with the tag immediately before the well_flask_ID in the sample name for
+non-unique well_flask_IDs</p>
+<pre class="r"><code>sample_info$well_flask_ID &lt;- gsub(&quot;_GS.*&quot;, &quot;&quot;, sample_info$well_flask_ID)
+sample_info$new_id &lt;- map2(sample_info$well_flask_ID, 
+             sample_info$sample_name, \(i, s) {
+               ex &lt;- sample_info |&gt; filter(sample_name == s) |&gt; 
+                 select(experiment) |&gt; pull()
+               org &lt;- sample_info |&gt; filter(sample_name == s) |&gt; 
+                   select(organism) |&gt; pull()
+                 is_duplicate &lt;- sample_info |&gt; 
+                   filter(organism == org &amp;
+                            well_flask_ID == i) |&gt; 
+                   group_by(time_point_str) |&gt; 
+                   summarise(n_per_tp = n())
+                 if (any(is_duplicate$n_per_tp &gt; 1)) {
+                   s &lt;- gsub(&quot;_GS.*&quot;, &quot;&quot;, s)
+                   new_tag &lt;- gsub(i, &quot;&quot;, s) |&gt; strsplit(split = &quot;_&quot;) |&gt; 
+                     unlist() |&gt; tail(n = 1)
+                   return(paste(new_tag, i, sep = &quot;_&quot;))
+                 }
+                 else {
+                   return(i)
+                 }
+             }) |&gt; unlist()
+# checking for non-unique IDs
+sample_info |&gt; 
+  group_by(new_id, organism, genotype, time_point_str) |&gt; 
+  summarise(n_per_org_gen_tp = n()) |&gt; 
+  filter((organism != &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 1) |
+           (organism == &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 2)) # should be empty</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;new_id&#39;, &#39;organism&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 0 × 5
+## # Groups:   new_id, organism, genotype [0]
+## # ℹ 5 variables: new_id &lt;chr&gt;, organism &lt;chr&gt;, genotype &lt;chr&gt;,
+## #   time_point_str &lt;chr&gt;, n_per_org_gen_tp &lt;int&gt;</code></pre>
+<pre class="r"><code># updating well_flask_ID 
+sample_info$well_flask_ID &lt;- sample_info$new_id
+sample_info &lt;- select(sample_info, -&quot;new_id&quot;)
+
+# checking example (two C5_A10s for the 960 timepoint)
+sample_info |&gt; filter(organism == &quot;par&quot; &amp;
+                        genotype == &quot;GCN4delete&quot;) |&gt; 
+  select(sample_name, condition, well_flask_ID)</code></pre>
+<pre><code>##                  sample_name      condition well_flask_ID
+## 1  GCN4_TP1_par_P1_C2_A4_GS2   GCN4delete_0         C2_A4
+## 2 GCN4_TP1_par_P2_C5_A10_GS5   GCN4delete_0     P2_C5_A10
+## 3  GCN4_TP3_par_P1_C2_A4_GS2 GCN4delete_960         C2_A4
+## 4 GCN4_TP3_par_P2_C5_A10_GS5 GCN4delete_960     P2_C5_A10
+## 5 GCN4_TP3_par_P1_C5_A10_GS2 GCN4delete_960     P1_C5_A10
+## 6  GCN4_TP2_par_P1_C2_A4_GS2  GCN4delete_60         C2_A4
+## 7 GCN4_TP2_par_P2_C5_A10_GS5  GCN4delete_60     P2_C5_A10</code></pre>
+<pre class="r"><code># should have additional tag P1 or P2 on the C5_A10s</code></pre>
+<p>Final check that now for parental samples: a) most well flask IDs are
+represented 3 times, and b) no well flask ID is represented more than 3
+times for each organism/condition:</p>
+<pre class="r"><code>sample_info |&gt; filter(organism != &quot;hyb&quot;) |&gt; 
+  mutate(org_gen = paste(organism, genotype, sep = &quot;_&quot;)) |&gt;
+  select(well_flask_ID, org_gen) |&gt; 
+  table() |&gt; table() # 0s are combinations of organism/well_flask_ID/genotype that don&#39;t exist, which is common because many well flask IDs are only present in one organism or genotype</code></pre>
+<pre><code>## 
+##     0     1     2     3 
+## 25103     9    28   249</code></pre>
+<p>And for hybrid samples: a) most well flask IDs are represented 6
+times, and b) no well flask ID is represented more than 6 times for each
+organism/condition:</p>
+<pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
+  select(well_flask_ID, genotype) |&gt; 
+  table() |&gt; table()</code></pre>
+<pre><code>## 
+##    0    2    4    6 
+## 7084   31   38   92</code></pre>
+</div>
 <div id="removing-samples-with-small-library-sizes"
 class="section level2">
 <h2>Removing samples with small library sizes</h2>
@@ -568,7 +784,7 @@ class="section level2">
 libsizes &lt;- colSums(counts) # these counts include all samples, hybrid and parental
 ggplot(tibble(libsize = libsizes), aes(x = libsize)) + geom_histogram()</code></pre>
 <pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
 <pre class="r"><code>sort(libsizes)[c(1:20)]</code></pre>
 <pre><code>##  GLN3_TP3_hyc_remnants_B3_C5_GS11  GLN3_TP3_hyp_remnants_B3_C5_GS11 
 ##                            105424                            105759 
@@ -611,7 +827,7 @@ ggplot(plotdf, aes(x = cer, y = par)) +
   geom_rect(xmin = 0, xmax = 100000, ymin = 0, ymax = 100000, color = &quot;blue&quot;, alpha = 0) +
   geom_vline(xintercept = 100000, color = &quot;blue&quot;, alpha = 0.5) +
   geom_hline(yintercept = 100000, color = &quot;blue&quot;, alpha = 0.5)</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
 <pre class="r"><code># (the samples within the blue box will be removed by our library size threshold below)
 # and no other samples should be below the blue lines but not within the blue box</code></pre>
 <p>Conclusion: yes, very correlated.</p>
@@ -640,16 +856,14 @@ test_count &lt;- test_cts[test_rowIdx, test_colIdx]
 test_cpm &lt;- countsPerMillion(test_cts)
 test_cpm_cpm &lt;- countsPerMillion(test_cpm)
 ((test_count/colSums(test_cts, na.rm = TRUE)[test_colIdx])*1e6) %&gt;% round() # what it should be</code></pre>
-<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
-##                        61</code></pre>
+<pre><code>## FKH1_TP2_par_P2_B4_B7_GS5 
+##                        42</code></pre>
 <pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
-<pre><code>## [1] 41</code></pre>
+<pre><code>## [1] 21</code></pre>
 <pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
-<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
-##                        61</code></pre>
+<pre><code>## [1] 42</code></pre>
 <pre class="r"><code>test_cpm_cpm[test_rowIdx, test_colIdx] # what it is if you run cpm too many times (should be the same as test_cpm)</code></pre>
-<pre><code>## MIG1_TP2_par_P2_D2_D4_GS5 
-##                        61</code></pre>
+<pre><code>## [1] 42</code></pre>
 <p>Actually normalizing</p>
 <pre class="r"><code>counts_unnorm &lt;- counts
 counts &lt;- countsPerMillion(counts)</code></pre>

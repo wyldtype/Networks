@@ -38,7 +38,9 @@ common_genes <- intersect(gsub("^cer_", "", tagseq_cer$gene),
 tagseq_cer$gene <- gsub("^cer_", "", tagseq_cer$gene)
 tagseq_par$gene <- gsub("^par_", "", tagseq_par$gene)
 tagseq_cer <- tagseq_cer[sapply(common_genes, \(x) which(x == tagseq_cer$gene)),]
+rownames(tagseq_cer) <- common_genes
 tagseq_par <- tagseq_par[sapply(common_genes, \(x) which(x == tagseq_par$gene)),]
+rownames(tagseq_par) <- common_genes
 sum(tagseq_cer$gene == tagseq_par$gene)
 length(common_genes)
 ```
@@ -185,6 +187,7 @@ counts <- apply(sample_info, 1, \(x) {
     return(output)
   }
 }) |> Reduce(f = cbind)
+rownames(counts) <- common_genes
 cat("All gene names are the same in combined count matrix and Scer count matrix:", all(rownames(counts) == rownames(tagseq_cer)), "
     \n")
 cat("All gene names are the same in combined count matrix and Spar count matrix:", all(rownames(counts) == rownames(tagseq_par)), "
@@ -252,6 +255,11 @@ colnames(sample_info) <- map_chr(colnames(sample_info), gsub, pattern = "^time_p
 sample_info$condition <- paste(sample_info$genotype,
                                sample_info$time_point_num, sep="_")
 
+# also creating a condition variable that includes organism (for determining replicate samples)
+sample_info$org_gen_tp <- paste(sample_info$organism,
+                                sample_info$genotype,
+                                sample_info$time_point_num, sep="_")
+
 # In case you're wondering, the collection date is when RNA was collected, 
 # NOT when the living yeast sample was collected
 # (only like 65 samples total have a collection date within 24 hours 
@@ -264,6 +272,134 @@ geneHasNAs <- apply(counts, 1, function(x) {
   return(any(isNA))
 }) 
 sum(geneHasNAs) # should have 0
+```
+
+## Renaming replicates
+
+Issue: well_flask_IDs, which are supposed to be the same ID for all three samples taken from the same well at each of the three timepoints, are currently slightly different for the same well. The reason is that there is a unique sample tag at the end of the well_flask_ID that we need to remove.
+
+Parent samples currently have mainly 1-2 wells labeled with the same well_flask_ID:
+
+```{r, message=FALSE}
+sample_info |> filter(organism != "hyb") |> 
+  mutate(org_gen = paste(organism, genotype, sep = "_")) |>
+  select(well_flask_ID, org_gen) |> 
+  table() |> table() # (0s are combinations of organism/well_flask_ID/genotype that don't exist, which is common because many well flask IDs are only present in one organism or genotype)
+```
+
+And Hybrids currently have mainly 2-4:
+
+```{r, message=FALSE}
+sample_info |> filter(organism == "hyb") |> 
+  select(well_flask_ID, genotype) |> 
+  table() |> table()
+```
+By the end of this section, every parental sample should still have at most 3 entries and most should have 3 (6 for hybrids, one for each of the two alleles).
+
+First of all (based on personal communication), the GS2018 samples (which are the majority of the WT samples) have a different well_flask_ID for the 1 hr sample than for 0 or 16 hr. For each row in the well plate (A-H), these are the numbers that are paired: 1-7, 2-8, 3-9, 4-10, 5-11, 6-12:
+```{r}
+col1 <- sapply(c("A", "B", "C", "D", "E", "F", "G", "H"), function(x) return(paste0(x, c(1:6)))) %>% as.vector()
+col2 <- sapply(c("A", "B", "C", "D", "E", "F", "G", "H"), function(x) return(paste0(x, c(7:12))))  %>% as.vector()
+gs2018_lookup <- tibble(TP1_TP3 = col1, TP2 = col2)
+
+# arbitrarily assigning each ID its TP1/TP3 (column 1 in lookup table) value as opposed to its TP2 value
+standardizeGS2018ID <- function(id) {
+  id_clipped <- gsub("_WT2_GS2018", "", id)
+  id_clipped <- gsub("_G12_GS2018", "", id_clipped)
+  id_clipped <- gsub("_G6_GS2018", "", id_clipped)
+  rownum <- c(which(gs2018_lookup$TP1_TP3 == id_clipped), which(gs2018_lookup$TP2 == id_clipped))
+  new_id <- gsub(gs2018_lookup$TP2[rownum], gs2018_lookup$TP1_TP3[rownum], id)
+  return(new_id)
+}
+# tests for standardizeGS2018ID
+standardizeGS2018ID("G8_G12_GS2018")
+```
+
+Before applying:
+```{r}
+cat("Parent samples (all 1s and 2s):\n")
+sample_info |> filter(organism %in% c("cer", "par") & grepl("GS2018", well_flask_ID)) |> 
+  select(well_flask_ID) |> table() 
+cat("Hybrid samples (all 2s and 4s):\n")
+sample_info |> filter(organism == "hyb" & grepl("GS2018", well_flask_ID)) |> 
+  select(well_flask_ID) |> table()
+```
+
+Applying to GS2018 samples:
+```{r}
+GS2018_idxs <- grepl("GS2018", sample_info$well_flask_ID)
+sample_info$well_flask_ID[GS2018_idxs] <- sapply(sample_info$well_flask_ID[GS2018_idxs], standardizeGS2018ID)
+```
+
+After applying:
+```{r}
+cat("Parent samples (should have 3, except for H1, which is missing a timepoint):\n")
+sample_info |> filter(organism %in% c("cer", "par") & grepl("GS2018", well_flask_ID)) |> 
+  select(well_flask_ID) |> table() 
+cat("Hybrid samples (should have 6):\n")
+sample_info |> filter(organism == "hyb" & grepl("GS2018", well_flask_ID)) |> 
+  select(well_flask_ID) |> table()
+# hybrids should have 6, 2 alleles x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint
+```
+Now we can get rid of the "GS" part of the rep name, which can be different for the same sample at different timepoints and replacing it with the tag immediately before the well_flask_ID in the sample name for non-unique well_flask_IDs
+```{r}
+sample_info$well_flask_ID <- gsub("_GS.*", "", sample_info$well_flask_ID)
+sample_info$new_id <- map2(sample_info$well_flask_ID, 
+             sample_info$sample_name, \(i, s) {
+               ex <- sample_info |> filter(sample_name == s) |> 
+                 select(experiment) |> pull()
+               org <- sample_info |> filter(sample_name == s) |> 
+                   select(organism) |> pull()
+                 is_duplicate <- sample_info |> 
+                   filter(organism == org &
+                            well_flask_ID == i) |> 
+                   group_by(time_point_str) |> 
+                   summarise(n_per_tp = n())
+                 if (any(is_duplicate$n_per_tp > 1)) {
+                   s <- gsub("_GS.*", "", s)
+                   new_tag <- gsub(i, "", s) |> strsplit(split = "_") |> 
+                     unlist() |> tail(n = 1)
+                   return(paste(new_tag, i, sep = "_"))
+                 }
+                 else {
+                   return(i)
+                 }
+             }) |> unlist()
+# checking for non-unique IDs
+sample_info |> 
+  group_by(new_id, organism, genotype, time_point_str) |> 
+  summarise(n_per_org_gen_tp = n()) |> 
+  filter((organism != "hyb" & n_per_org_gen_tp > 1) |
+           (organism == "hyb" & n_per_org_gen_tp > 2)) # should be empty
+```
+
+```{r}
+# updating well_flask_ID 
+sample_info$well_flask_ID <- sample_info$new_id
+sample_info <- select(sample_info, -"new_id")
+
+# checking example (two C5_A10s for the 960 timepoint)
+sample_info |> filter(organism == "par" &
+                        genotype == "GCN4delete") |> 
+  select(sample_name, condition, well_flask_ID)
+# should have additional tag P1 or P2 on the C5_A10s
+```
+
+Final check that now for parental samples: a) most well flask IDs are represented 3 times, and b) no well flask ID is represented more than 3 times for each organism/condition:
+
+```{r, message=FALSE}
+sample_info |> filter(organism != "hyb") |> 
+  mutate(org_gen = paste(organism, genotype, sep = "_")) |>
+  select(well_flask_ID, org_gen) |> 
+  table() |> table() # 0s are combinations of organism/well_flask_ID/genotype that don't exist, which is common because many well flask IDs are only present in one organism or genotype
+```
+
+And for hybrid samples: a) most well flask IDs are represented 6 times, and b) no well flask ID is represented more than 6 times for each organism/condition:
+
+```{r, message=FALSE}
+sample_info |> filter(organism == "hyb") |> 
+  select(well_flask_ID, genotype) |> 
+  table() |> table()
 ```
 
 ## Removing samples with small library sizes

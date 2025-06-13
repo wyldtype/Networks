@@ -1,0 +1,302 @@
+---
+title: "DESeq2"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+sapply(c("tidyr", "dplyr", "purrr", "ggplot2", "ggpubr", "DESeq2"), require, character.only=TRUE)
+load("data_files/CleanedCounts.RData")
+eff_thresh <- 1
+p_thresh <- 0.05
+GeneNames <- rownames(counts)
+```
+
+## Data organizing 
+
+```{r}
+counts <- list(cerTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "cer"],
+               parTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "par"],
+               hycTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "hyb" & sample_info$allele == "cer"],
+               hypTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "hyb" & sample_info$allele == "par"],
+               cerTP2 = counts[,sample_info$time_point_num == 60 & sample_info$organism == "cer"],
+               parTP2 = counts[,sample_info$time_point_num == 60 & sample_info$organism == "par"],
+               hycTP2 = counts[,sample_info$time_point_num == 60 & sample_info$organism == "hyb" & sample_info$allele == "cer"],
+               hypTP2 = counts[,sample_info$time_point_num == 60 & sample_info$organism == "hyb" & sample_info$allele == "par"],
+               cerTP3 = counts[,sample_info$time_point_num == 960 & sample_info$organism == "cer"],
+               parTP3 = counts[,sample_info$time_point_num == 960 & sample_info$organism == "par"],
+               hycTP3 = counts[,sample_info$time_point_num == 960 & sample_info$organism == "hyb" & sample_info$allele == "cer"],
+               hypTP3 = counts[,sample_info$time_point_num == 960 & sample_info$organism == "hyb" & sample_info$allele == "par"])
+
+infos <- list(cerTP1 = sample_info[sample_info$time_point_num == 0 & sample_info$organism == "cer",],
+               parTP1 = sample_info[sample_info$time_point_num == 0 & sample_info$organism == "par",],
+               hycTP1 = sample_info[sample_info$time_point_num == 0 & sample_info$organism == "hyb" & sample_info$allele == "cer",],
+               hypTP1 = sample_info[sample_info$time_point_num == 0 & sample_info$organism == "hyb" & sample_info$allele == "par",],
+               cerTP2 = sample_info[sample_info$time_point_num == 60 & sample_info$organism == "cer",],
+               parTP2 = sample_info[sample_info$time_point_num == 60 & sample_info$organism == "par",],
+               hycTP2 = sample_info[sample_info$time_point_num == 60 & sample_info$organism == "hyb" & sample_info$allele == "cer",],
+               hypTP2 = sample_info[sample_info$time_point_num == 60 & sample_info$organism == "hyb" & sample_info$allele == "par",],
+               cerTP3 = sample_info[sample_info$time_point_num == 960 & sample_info$organism == "cer",],
+               parTP3 = sample_info[sample_info$time_point_num == 960 & sample_info$organism == "par",],
+               hycTP3 = sample_info[sample_info$time_point_num == 960 & sample_info$organism == "hyb" & sample_info$allele == "cer",],
+               hypTP3 = sample_info[sample_info$time_point_num == 960 & sample_info$organism == "hyb" & sample_info$allele == "par",])
+```
+
+## Removing samples missing replicates
+Rationale: DESeq2 still tries to estimate a log2 fold change when a genotype has only one replicate. Example: YAP1 in hybrids (any timepoint). In parents it has 2 replicates:
+```{r}
+infos$cerTP1 |> select(genotype, time_point_str) |> table()
+```
+In hybrids, one:
+```{r}
+infos$hycTP1 |> select(genotype, time_point_str) |> table()
+```
+While most padj are NA, not all are:
+```{r}
+test <- DESeq(DESeqDataSetFromMatrix(countData = counts$hycTP1,
+                                     colData = infos$hycTP1,
+                                     design = ~ genotype))
+results(test, contrast = c("genotype", "YAP1delete", "WT"),
+        alpha = 0.05)[,"padj"] |> table(useNA = "always")
+```
+Looping through counts/info to remove genotypes that don't have 2 replicates at a certain timepoint.
+```{r}
+
+# TODO: This removes TFs without 2 reps at ALL timepoints, we just want to remove them at the TP where they're missing replicates
+
+filterGenotypes <- function(.info, .counts) {
+  tab <- .info |> select(genotype, time_point_str) |> table()
+  no_rep_genotypes <- rownames(tab)[which(tab < 2)]
+  return(filter(.info, !(genotype %in% no_rep_genotypes)))
+}
+infos <- map(infos, filterGenotypes)
+# also updating cols of counts to match columns
+updateCountsCols <- function(.counts, .info) {
+  return(.counts[,.info$sample_name])
+}
+counts <- map2(counts, infos, updateCountsCols)
+
+# now YAP1 isn't in hybrid
+infos$cerTP1 |> select(genotype, time_point_str) |> table()
+infos$hycTP1 |> select(genotype, time_point_str) |> table()
+```
+Converting genotype to a factor, after removing genotypes,
+so different number of levels per dataset.
+```{r}
+infos <- map(infos, mutate, 
+             genotype = genotype |> 
+               as.factor() |> 
+               relevel(ref = "WT"))
+
+# pairing counts and sample info
+dds <- map2(counts, infos, \(x, y) {
+  output <- DESeqDataSetFromMatrix(countData = x,
+                                   colData = y,
+                                   design = ~ genotype)
+  return(output)
+})
+```
+
+## Model fitting
+
+This takes the majority of the time:
+```{r}
+library("BiocParallel")
+register(MulticoreParam(4))
+dds <- map(dds, DESeq, parallel = TRUE)
+```
+Checking positive control: TDH3 decreases in GCR2delete at TP1 (any timepoint, any species). We'll use Scer TP1 as the example.
+```{r}
+# test <- results(dds$cerTP1, contrast = c("genotype", "GCR2delete", "WT"),
+#                 alpha = 0.05)
+# test["YGR192C",] # down in Scer
+```
+
+## Formatting Data
+
+```{r}
+# extracting LFCs, SEs, and pvalues from each TFdel-WT comparison in each 
+# species and output as TFdeldfs
+griddfTP1 <- bind_rows(infos$cerTP1,
+                    infos$parTP1,
+                    infos$hycTP1,
+                    infos$hypTP1) |> 
+  select(genotype, allele, organism) |> 
+  filter(genotype != "WT") |> 
+  mutate(timepoint = "TP1",
+         orgallele = if_else(organism == "hyb",
+                             false = organism,
+                             true = if_else(allele == "cer",
+                                            true = "hyc",
+                                            false = "hyp"))) |> 
+  unique()
+griddfTP2 <- bind_rows(infos$cerTP2,
+                       infos$parTP2,
+                       infos$hycTP2,
+                       infos$hypTP2) |> 
+  select(genotype, allele, organism) |> 
+  filter(genotype != "WT") |> 
+  mutate(timepoint = "TP2",
+         orgallele = if_else(organism == "hyb",
+                             false = organism,
+                             true = if_else(allele == "cer",
+                                            true = "hyc",
+                                            false = "hyp"))) |> 
+  unique()
+griddfTP3 <- bind_rows(infos$cerTP3,
+                       infos$parTP3,
+                       infos$hycTP3,
+                       infos$hypTP3) |> 
+  select(genotype, allele, organism) |> 
+  filter(genotype != "WT") |> 
+  mutate(timepoint = "TP3",
+         orgallele = if_else(organism == "hyb",
+                             false = organism,
+                             true = if_else(allele == "cer",
+                                            true = "hyc",
+                                            false = "hyp"))) |> 
+  unique()
+griddf <- bind_rows(griddfTP1, griddfTP2, griddfTP3)
+
+TFdeldf <- map(c(1:nrow(griddf)), \(i) {
+  del <- griddf$genotype[i] |> as.character()
+  org <- griddf$orgallele[i]
+  tp <- griddf$timepoint[i]
+  res <- results(dds[[paste0(org, tp)]], contrast = c("genotype", del, "WT"),
+                 alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
+  return(tibble(gene_name = GeneNames,
+                deletion = gsub("delete", "", del),
+                organism = org,
+                timepoint = tp,
+                basemean = res$baseMean,
+                lfc = res$log2FoldChange,
+                lfcSE = res$lfcSE,
+                pval = res$pvalue,
+                padj = res$padj))
+}) |> bind_rows()
+```
+A few gene/TF/tp combos didn't converge in DESeq2 or were missing replicates:
+```{r}
+length(unique(TFdeldf$deletion))
+sum(is.na(TFdeldf))
+sum(is.na(TFdeldf$padj))
+table(is.na(TFdeldf$padj), TFdeldf$timepoint)
+sum(is.na(TFdeldf$lfc)) + sum(is.na(TFdeldf$lfcSE)) + sum(is.na(TFdeldf$pval)) + sum(is.na(TFdeldf$padj))
+
+TFdeldf <- drop_na(TFdeldf)
+length(unique(TFdeldf$deletion)) # we shouldn't lose any TFs entirely
+
+sum(TFdeldf$padj < p_thresh)
+sum(TFdeldf$padj >= p_thresh) # should have way fewer significant effects
+```
+
+## Negative control: WT samples 28 vs 2, "leave one out" as sham TFdels
+
+Rationale: Because there's such a difference in power between having 2 TFdel replicates versus 30 WT replicates, we want to verify that the 2 TFdel replicates are detecting more and different DE genes than randomly leaving out 2 WT replicates and treating them like TFdels would.
+
+```{r}
+set.seed(23)
+# looping through counts, change counts for each TFdel to be 2 randomly sampled WT samples (or however many replicates that TF has)
+counts_sham1 <- map2(counts, infos, \(x, y) {
+  for (del in setdiff(unique(y$genotype), "WT")) {
+    samps <- filter(y, genotype == del) |> select(sample_name) |> pull()
+    wt_samps <- filter(y, genotype == "WT") |> select(sample_name) |> pull()
+    x[, samps] <- x[, sample(wt_samps, length(samps), replace = FALSE)] # because we loop through this sampling for every deletion it is effectively sampling with replacement. We just want to make sure the same sample isn't used twice for the same genotype, as variation for every gene would be 0
+  }
+  return(x)
+})
+
+set.seed(42)
+
+# same thing twice, just randomizing which WT samples go to which TF
+counts_sham2 <- map2(counts, infos, \(x, y) {
+  for (del in setdiff(unique(y$genotype), "WT")) {
+    samps <- filter(y, genotype == del) |> select(sample_name) |> pull()
+    wt_samps <- filter(y, genotype == "WT") |> select(sample_name) |> pull()
+    x[, samps] <- x[, sample(wt_samps, length(samps), replace = FALSE)] # because we loop through this sampling for every deletion it is effectively sampling with replacement. We just want to make sure the same sample isn't used twice for the same genotype, as variation for every gene would be 0
+  }
+  return(x)
+})
+
+# pairing counts and sample info
+dds_sham1 <- map2(counts_sham1, infos, \(x, y) {
+  output <- DESeqDataSetFromMatrix(countData = x,
+                                   colData = y,
+                                   design = ~ genotype)
+  return(output)
+})
+
+dds_sham2 <- map2(counts_sham2, infos, \(x, y) {
+  output <- DESeqDataSetFromMatrix(countData = x,
+                                   colData = y,
+                                   design = ~ genotype)
+  return(output)
+})
+
+### Model fitting
+library("BiocParallel")
+register(MulticoreParam(4))
+dds_sham1 <- map(dds_sham1, DESeq, parallel = TRUE)
+dds_sham2 <- map(dds_sham2, DESeq, parallel = TRUE)
+
+# # checking control: TDH3 decreases in GCR2delete
+# # TP1
+# test <- results(dds_sham1$cerTP1, contrast = c("genotype", "GCR2delete", "WT"),
+#                 alpha = 0.05)
+# test["YGR192C",] # shouldn't be DE anymore, WT vs WT
+
+### Formatting data
+# extracting LFCs, SEs, and pvalues from each TFdel-WT comparison in each 
+# species and output as TFdeldfs
+TFdeldf_sham1 <- map(c(1:nrow(griddf)), \(i) {
+  del <- griddf$genotype[i] |> as.character()
+  org <- griddf$orgallele[i]
+  tp <- griddf$timepoint[i]
+  res <- results(dds_sham1[[paste0(org, tp)]], contrast = c("genotype", del, "WT"),
+                 alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
+  return(tibble(gene_name = GeneNames,
+                deletion = gsub("delete", "", del),
+                organism = org,
+                timepoint = tp,
+                basemean = res$baseMean,
+                lfc = res$log2FoldChange,
+                lfcSE = res$lfcSE,
+                pval = res$pvalue,
+                padj = res$padj))
+}) |> bind_rows()
+
+TFdeldf_sham2 <- map(c(1:nrow(griddf)), \(i) {
+  del <- griddf$genotype[i] |> as.character()
+  org <- griddf$orgallele[i]
+  tp <- griddf$timepoint[i]
+  res <- results(dds_sham2[[paste0(org, tp)]], contrast = c("genotype", del, "WT"),
+                 alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
+  return(tibble(gene_name = GeneNames,
+                deletion = gsub("delete", "", del),
+                organism = org,
+                timepoint = tp,
+                basemean = res$baseMean,
+                lfc = res$log2FoldChange,
+                lfcSE = res$lfcSE,
+                pval = res$pvalue,
+                padj = res$padj))
+}) |> bind_rows()
+
+# A few gene/TF/tp combos didn't converge in DESeq2 or were missing replicates:
+TFdeldf_sham1 <- drop_na(TFdeldf_sham1)
+TFdeldf_sham2 <- drop_na(TFdeldf_sham2)
+
+sum(TFdeldf_sham1$padj < p_thresh)
+sum(TFdeldf_sham1$padj >= p_thresh) # should have way fewer significant effects
+sum(TFdeldf_sham2$padj < p_thresh)
+sum(TFdeldf_sham2$padj >= p_thresh)
+```
+
+## Saving
+
+```{r}
+save(TFdeldf, TFdeldf_sham1, TFdeldf_sham2, file = "data_files/DESeq2.RData")
+```
+

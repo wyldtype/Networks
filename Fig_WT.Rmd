@@ -1,0 +1,70 @@
+---
+title: "Wildtype differences in Low Nitrogen Network between Scer and Spar"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats"), require, character.only=TRUE)
+load("data_files/CleanedCounts.RData")
+
+TFnames <- setdiff(unique(gsub("delete", "", sample_info$genotype)), "WT")
+p_thresh <- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
+eff_thresh <- 1
+TFdel_lookup <- read_delim("data_files/downloaded_genomes_and_features/yeastract_46TFs.csv", col_names = FALSE, col_select = c(1,2), delim = ";")
+colnames(TFdel_lookup) <- c("common", "systematic")
+```
+
+## Which TFs are differentially expressed between species?
+
+Mean expression in Scer vs Spar, avg across timepoints. Error bars are standard error from replicates.
+
+```{r}
+# TODO: scatter plot Scer vs Spar with geom_text as the TF names
+```
+
+
+```{r}
+TFdf <- TFdeldf |> select(gene_name, deletion, timepoint, organism, lfc, padj) |>
+  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+              names_from = "organism", values_from = c("lfc", "padj")) |> 
+  right_join(y = TFdel_lookup, by = c("gene_name"="systematic"),
+             relationship = "many-to-one")
+
+# TODO: adapt to use TFdeldf if needed
+# # heatmap of TF lfc between species in each environment
+# effectsdf <- TFdf |> 
+#   drop_na() |> 
+#   select(common, experiment, effect_size_species) |> 
+#   pivot_wider(id_cols = "common", names_from = "experiment",
+#               values_from = "effect_size_species")
+# effects_mat <- select(effectsdf, -common) |> as.matrix()
+# rownames(effects_mat) <- effectsdf$common
+# effects_mat[is.na(effects_mat)] <- 0 # Heatmap can't handle the number of NAs
+# pvalsdf <- TFdf |> 
+#   drop_na() |> 
+#   select(common, experiment, pvalue_species) |> 
+#   pivot_wider(id_cols = "common", names_from = "experiment",
+#               values_from = "pvalue_species")
+# pvals_mat <- select(pvalsdf, -common) |> as.matrix()
+# rownames(pvals_mat) <- pvalsdf$common
+# pvals_mat[is.na(pvals_mat)] <- 1
+# 
+# col_fun <- colorRamp2(c(-2, 0, 2), c("blue2", "lightyellow", "orange1"))
+# Heatmap(effects_mat, col = col_fun, na_col = "grey",
+#         column_order = c("HAP4", "CC", "LowN", "LowPi", "Heat", "Cold"),
+#         cell_fun = function(j, i, x, y, width, height, fill) {
+#   output <- ifelse(pvals_mat[i, j] < 1e-5, yes = "*", no = "")
+#     grid.text(output, x, y, gp = gpar(fontsize = 10))
+# })
+# # GAT1, PHD1, INO4, MBP1, AFT1 most obviously higher expressed in Scer, 
+# # PHO4, TEC1, MET28 higher in Spar
+# # mostly consistent btwn experiments with some exceptions mainly in heat/cold
+# # HAP4, RPN4 most dramatic difference in effect direction---Scer up in Heat, Spar up in all others
+```
+
+## Hybrid Network
+
+

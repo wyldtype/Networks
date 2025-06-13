@@ -11,7 +11,7 @@
 
 
 
-<title>Scraps</title>
+<title>Functions</title>
 
 <script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -245,6 +245,9 @@ $(document).ready(function () {
         <li>
   <a href="index.html">Home</a>
 </li>
+<li>
+  <a href="about.html">Functions</a>
+</li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Data Cleaning
@@ -256,9 +259,6 @@ $(document).ready(function () {
       <a href="data_cleaning.html">Import and clean count data</a>
     </li>
   </ul>
-</li>
-<li>
-  <a href="about.html">About</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -272,13 +272,18 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Scraps</h1>
+<h1 class="title toc-ignore">Functions</h1>
 
 </div>
 
 
-<p>Code scraps from plasticity involving TFdel genotypes to be used in
-networks</p>
+<p>For testing functions:</p>
+<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
+## matrixStats 
+##        TRUE</code></pre>
+<pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)</code></pre>
 <p>Plotting functions:</p>
 <pre class="r"><code># plots WT vs TFdel in both species
 plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
@@ -450,29 +455,30 @@ plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
   }
 }
 # # tests for plotExpressionProfileTFdel
-# TODO: ARG81 1-2 at TP1 has un-normalized TFdel replicates near the top of the WT pack,
-# but log2 has them somewhere in the middle
-# gene_idxs &lt;- gene_idxs &lt;- finaldf |&gt; filter(experiment == &quot;LowN&quot; &amp;
-#                                               group == &quot;dyn21&quot;) |&gt; 
-#   select(gene_name) |&gt; pull()
-# cer_wt_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;WT&quot; &amp; sample_info_tfdel_allele$allele == &quot;cer&quot;)
-# par_wt_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;WT&quot; &amp; sample_info_tfdel_allele$allele == &quot;par&quot;)
-# cer_tfdel_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;LEU3delete&quot; &amp; sample_info_tfdel_allele$allele == &quot;cer&quot;)
-# par_tfdel_cols &lt;- which(sample_info_tfdel_allele$genotype == &quot;LEU3delete&quot; &amp; sample_info_tfdel_allele$allele == &quot;par&quot;)
-# plotExpressionProfileTFdel(.cts1 = counts_tfdel_allele[gene_idxs, cer_wt_cols],
-#                            .cts2 = counts_tfdel_allele[gene_idxs, par_wt_cols],
-#                            .cts3 = counts_tfdel_allele[gene_idxs, cer_tfdel_cols],
-#                            .cts4 = counts_tfdel_allele[gene_idxs, par_tfdel_cols],
-#                            .info1 = sample_info_tfdel_allele[cer_wt_cols,],
-#                            .info2 = sample_info_tfdel_allele[par_wt_cols,],
-#                            .info3 = sample_info_tfdel_allele[cer_tfdel_cols,],
-#                            .info4 = sample_info_tfdel_allele[par_tfdel_cols,],
-#                            .normalization = &quot;log2&quot;,
-#                            .show_points_wt = TRUE,
-#                            .show_points_tfdel = TRUE,
-#                            .show_lines_tfdel = TRUE)
-
-# Plots each genotype as a separate line
+# HST2 exp in TEC1delete
+plotExpressionProfileTFdel(.cts1 = counts[&quot;YPL015C&quot;, sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;WT&quot;, drop = FALSE],
+                           .cts2 = counts[&quot;YPL015C&quot;, sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;WT&quot;, drop = FALSE],
+                           .cts3 = counts[&quot;YPL015C&quot;, sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;, drop = FALSE],
+                           .cts4 = counts[&quot;YPL015C&quot;, sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;, drop = FALSE],
+                           .info1 = sample_info[sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;WT&quot;,],
+                           .info2 = sample_info[sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;WT&quot;,],
+                           .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,],
+                           .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,], 
+                           .normalization = &quot;none&quot;)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre><code>## Warning: Removed 3 rows containing missing values or values outside the scale range
+## (`geom_point()`).</code></pre>
+<p><img src="about_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<pre class="r"><code># Plots each genotype as a separate line
 plotExpressionProfileTFdels &lt;- function(.cts,
                                         .info,
                                         .name1 = &quot;WT&quot;,
@@ -781,14 +787,55 @@ plotGenesTFdel &lt;- function(.gene_idxs, .tf, .parents_or_hybrid = &quot;parent
 #                &quot;YLR274W&quot;, &quot;YLR283W&quot;, &quot;YOR047C&quot;, &quot;YOR201C&quot;, &quot;YOR315W&quot;, &quot;YPR105C&quot;, &quot;YPR129W&quot;,
 #                &quot;YPR198W&quot;)
 # plotGenesTFdel(.tf = &quot;GCR2&quot;, .gene_idxs = gene_idxs)
-# plotGenesTFdel(.tf = &quot;GCR2&quot;, .gene_idxs = gene_idxs, .single_genes = TRUE)</code></pre>
-<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;purrr&quot;, &quot;tidyr&quot;, &quot;ggpubr&quot;, &quot;readr&quot;,
-         &quot;data.table&quot;, &quot;ggplot2&quot;, &quot;data.table&quot;, 
-         &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##       dplyr       purrr       tidyr      ggpubr       readr 
-##        TRUE        TRUE        TRUE        TRUE        TRUE 
-##  data.table     ggplot2  data.table matrixStats 
-##        TRUE        TRUE        TRUE        TRUE</code></pre>
+# plotGenesTFdel(.tf = &quot;GCR2&quot;, .gene_idxs = gene_idxs, .single_genes = TRUE)
+
+# Upset plot
+# given a group name, which must be a column in .df,
+# members of that group (possible values in that column, such as TFs in the deletion column),
+# items in the group, other column names in .df (usually gene names, but can be gene-effect-TF combos if organism is group)
+# creates an upset plot (3+ group Venn diagram) 
+# which enumerates which combinations of groups share how many items
+makeUpsetPlot &lt;- function(.df, .group_name, .group_members, .item_names,
+                          .min_comb_size = 5) {
+  lt &lt;- vector(mode = &quot;list&quot;, length = 0)
+  for (grpmem in .group_members) {
+    lt[[grpmem]] &lt;- filter(.df, .data[[.group_name]] == grpmem)
+  }
+  lt &lt;- lt |&gt; 
+    map(.f = select, .item_names) |&gt; 
+    map(.f = \(x) {purrr::reduce(x, .f = paste0)})
+  plotdf &lt;- make_comb_mat(lt)
+  plotdf &lt;- plotdf[,comb_size(plotdf) &gt;= .min_comb_size]
+  p &lt;- UpSet(plotdf, 
+             set_order = .group_members,
+             comb_order = order(comb_size(plotdf)),
+             top_annotation = HeatmapAnnotation( 
+               &quot;number of genes&quot; = anno_barplot(comb_size(plotdf), 
+                                                ylim = c(0, max(comb_size(plotdf))*1.1),
+                                                border = FALSE, 
+                                                gp = gpar(fill = &quot;black&quot;), 
+                                                height = unit(4, &quot;cm&quot;)), 
+               annotation_name_side = &quot;left&quot;, 
+               annotation_name_rot = 90))
+  draw(p)
+  suppressWarnings(decorate_annotation(&quot;number of genes&quot;, {
+    grid.text(comb_size(plotdf)[column_order(p)], x = seq_along(comb_size(plotdf)), y = unit(comb_size(plotdf)[column_order(p)], &quot;native&quot;) + unit(2, &quot;pt&quot;), 
+              default.units = &quot;native&quot;, just = c(&quot;left&quot;, &quot;bottom&quot;), 
+              gp = gpar(fontsize = 6, col = &quot;#404040&quot;), rot = 45)
+  }))
+}
+# tests for makeUpsetPlot
+# TF example within on organism
+# makeUpsetPlot(.df = filter(effectdf, organism == &quot;hyc&quot; &amp;
+#                              effect == &quot;dynamics&quot;),
+#               .group_name = &quot;deletion&quot;,
+#               .group_members = c(&quot;GAT1&quot;, &quot;URE2&quot;, &quot;GLN3&quot;),
+#               .item_names = &quot;gene_name&quot;)
+# # organism venn diagram of sharing gene-TF-effect items
+# makeUpsetPlot(.df = effectdf,
+#               .group_name = &quot;organism&quot;,
+#               .group_members = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyc&quot;, &quot;hyp&quot;),
+#               .item_names = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;effect&quot;))s</code></pre>
 
 
 

@@ -1,6 +1,6 @@
 .Rproj.user
-.Rhistory
-.RData
-.Ruserdata
+*.Rhistory
+*.RData
+*.Ruserdata
 *ReadsPerGene.out.tab
 *.xlsx

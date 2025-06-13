@@ -4,10 +4,10 @@ navbar:
   left:
     - text: "Home"
       href: index.html
+    - text: "Functions"
+      href: about.html
     - text: "Data Cleaning"
       menu:
       - text: "Import and clean count data"
         href: data_cleaning.html
-    - text: "About"
-      href: about.html
 output_dir: "docs"

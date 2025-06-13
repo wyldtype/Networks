@@ -1,8 +1,11 @@
 ---
-title: "Scraps"
+title: "Functions"
 ---
-
-Code scraps from plasticity involving TFdel genotypes to be used in networks
+For testing functions:
+```{r, message=FALSE, warning=FALSE}
+sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats"), require, character.only=TRUE)
+load("data_files/CleanedCounts.RData")
+```
 
 Plotting functions:
 
@@ -177,28 +180,20 @@ plotExpressionProfileTFdel <- function(.cts1, .cts2, .cts3, .cts4,
   }
 }
 # # tests for plotExpressionProfileTFdel
-# TODO: ARG81 1-2 at TP1 has un-normalized TFdel replicates near the top of the WT pack,
-# but log2 has them somewhere in the middle
-# gene_idxs <- gene_idxs <- finaldf |> filter(experiment == "LowN" &
-#                                               group == "dyn21") |> 
-#   select(gene_name) |> pull()
-# cer_wt_cols <- which(sample_info_tfdel_allele$genotype == "WT" & sample_info_tfdel_allele$allele == "cer")
-# par_wt_cols <- which(sample_info_tfdel_allele$genotype == "WT" & sample_info_tfdel_allele$allele == "par")
-# cer_tfdel_cols <- which(sample_info_tfdel_allele$genotype == "LEU3delete" & sample_info_tfdel_allele$allele == "cer")
-# par_tfdel_cols <- which(sample_info_tfdel_allele$genotype == "LEU3delete" & sample_info_tfdel_allele$allele == "par")
-# plotExpressionProfileTFdel(.cts1 = counts_tfdel_allele[gene_idxs, cer_wt_cols],
-#                            .cts2 = counts_tfdel_allele[gene_idxs, par_wt_cols],
-#                            .cts3 = counts_tfdel_allele[gene_idxs, cer_tfdel_cols],
-#                            .cts4 = counts_tfdel_allele[gene_idxs, par_tfdel_cols],
-#                            .info1 = sample_info_tfdel_allele[cer_wt_cols,],
-#                            .info2 = sample_info_tfdel_allele[par_wt_cols,],
-#                            .info3 = sample_info_tfdel_allele[cer_tfdel_cols,],
-#                            .info4 = sample_info_tfdel_allele[par_tfdel_cols,],
-#                            .normalization = "log2",
-#                            .show_points_wt = TRUE,
-#                            .show_points_tfdel = TRUE,
-#                            .show_lines_tfdel = TRUE)
+# HST2 exp in TEC1delete
+plotExpressionProfileTFdel(.cts1 = counts["YPL015C", sample_info$organism == "cer" & sample_info$genotype == "WT", drop = FALSE],
+                           .cts2 = counts["YPL015C", sample_info$organism == "par" & sample_info$genotype == "WT", drop = FALSE],
+                           .cts3 = counts["YPL015C", sample_info$organism == "cer" & sample_info$genotype == "TEC1delete", drop = FALSE],
+                           .cts4 = counts["YPL015C", sample_info$organism == "par" & sample_info$genotype == "TEC1delete", drop = FALSE],
+                           .info1 = sample_info[sample_info$organism == "cer" & sample_info$genotype == "WT",],
+                           .info2 = sample_info[sample_info$organism == "par" & sample_info$genotype == "WT",],
+                           .info3 = sample_info[sample_info$organism == "cer" & sample_info$genotype == "TEC1delete",],
+                           .info4 = sample_info[sample_info$organism == "par" & sample_info$genotype == "TEC1delete",], 
+                           .normalization = "none")
+```
 
+
+```{r}
 # Plots each genotype as a separate line
 plotExpressionProfileTFdels <- function(.cts,
                                         .info,
@@ -510,11 +505,52 @@ plotGenesTFdel <- function(.gene_idxs, .tf, .parents_or_hybrid = "parents",
 # plotGenesTFdel(.tf = "GCR2", .gene_idxs = gene_idxs)
 # plotGenesTFdel(.tf = "GCR2", .gene_idxs = gene_idxs, .single_genes = TRUE)
 
-```
-
-```{r lowExprFilter}
-sapply(c("dplyr", "purrr", "tidyr", "ggpubr", "readr",
-         "data.table", "ggplot2", "data.table", 
-         "matrixStats"), require, character.only=TRUE)
+# Upset plot
+# given a group name, which must be a column in .df,
+# members of that group (possible values in that column, such as TFs in the deletion column),
+# items in the group, other column names in .df (usually gene names, but can be gene-effect-TF combos if organism is group)
+# creates an upset plot (3+ group Venn diagram) 
+# which enumerates which combinations of groups share how many items
+makeUpsetPlot <- function(.df, .group_name, .group_members, .item_names,
+                          .min_comb_size = 5) {
+  lt <- vector(mode = "list", length = 0)
+  for (grpmem in .group_members) {
+    lt[[grpmem]] <- filter(.df, .data[[.group_name]] == grpmem)
+  }
+  lt <- lt |> 
+    map(.f = select, .item_names) |> 
+    map(.f = \(x) {purrr::reduce(x, .f = paste0)})
+  plotdf <- make_comb_mat(lt)
+  plotdf <- plotdf[,comb_size(plotdf) >= .min_comb_size]
+  p <- UpSet(plotdf, 
+             set_order = .group_members,
+             comb_order = order(comb_size(plotdf)),
+             top_annotation = HeatmapAnnotation( 
+               "number of genes" = anno_barplot(comb_size(plotdf), 
+                                                ylim = c(0, max(comb_size(plotdf))*1.1),
+                                                border = FALSE, 
+                                                gp = gpar(fill = "black"), 
+                                                height = unit(4, "cm")), 
+               annotation_name_side = "left", 
+               annotation_name_rot = 90))
+  draw(p)
+  suppressWarnings(decorate_annotation("number of genes", {
+    grid.text(comb_size(plotdf)[column_order(p)], x = seq_along(comb_size(plotdf)), y = unit(comb_size(plotdf)[column_order(p)], "native") + unit(2, "pt"), 
+              default.units = "native", just = c("left", "bottom"), 
+              gp = gpar(fontsize = 6, col = "#404040"), rot = 45)
+  }))
+}
+# tests for makeUpsetPlot
+# TF example within on organism
+# makeUpsetPlot(.df = filter(effectdf, organism == "hyc" &
+#                              effect == "dynamics"),
+#               .group_name = "deletion",
+#               .group_members = c("GAT1", "URE2", "GLN3"),
+#               .item_names = "gene_name")
+# # organism venn diagram of sharing gene-TF-effect items
+# makeUpsetPlot(.df = effectdf,
+#               .group_name = "organism",
+#               .group_members = c("cer", "par", "hyc", "hyp"),
+#               .item_names = c("gene_name", "deletion", "effect"))s
 ```
 

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Fig_TFdel</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Networks</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">Functions</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Data Cleaning
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="data_cleaning.html">Import and clean count data</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Fig_TFdel</h1>
+
+</div>
+
+
+<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ComplexHeatmap&quot;, &quot;circlize&quot;), require, character.only=TRUE)</code></pre>
+<pre><code>##          dplyr          readr          tidyr          purrr        ggplot2 
+##           TRUE           TRUE           TRUE           TRUE           TRUE 
+##         ggpubr    matrixStats ComplexHeatmap       circlize 
+##           TRUE           TRUE           TRUE           TRUE</code></pre>
+<pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
+load(&quot;data_files/DESeq2.RData&quot;)
+
+TFnames &lt;- setdiff(unique(gsub(&quot;delete&quot;, &quot;&quot;, sample_info$genotype)), &quot;WT&quot;)
+p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
+eff_thresh &lt;- 1
+TFdel_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/yeastract_46TFs.csv&quot;, col_names = FALSE, col_select = c(1,2), delim = &quot;;&quot;) # gets some warnings, but so far has been fine</code></pre>
+<pre><code>## Rows: 46 Columns: 2
+## ── Column specification ───────────────────────────────────────────────────────
+## Delimiter: &quot;;&quot;
+## chr (2): X1, X2
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>colnames(TFdel_lookup) &lt;- c(&quot;common&quot;, &quot;systematic&quot;)</code></pre>
+<div id="how-many-genes-does-each-tfdel-affect-in-each-species"
+class="section level2">
+<h2>How many genes does each TFdel affect in each species?</h2>
+<pre class="r"><code># tables/heatmaps for TP1 and TP3 of counts of how many genes are affected by each TFdel (either direction) in each species and hybrid alleles
+
+effectsdf &lt;- TFdeldf |&gt; 
+  filter(timepoint != &quot;TP2&quot;) |&gt; 
+  group_by(deletion, organism, timepoint) |&gt; 
+  summarise(nGenes = sum(abs(lfc) &gt; eff_thresh &amp; 
+                           padj &lt; p_thresh)) |&gt; 
+  pivot_wider(id_cols = c(&quot;deletion&quot;), 
+              names_from = c(&quot;organism&quot;, &quot;timepoint&quot;), 
+              values_from = &quot;nGenes&quot;) |&gt; 
+  ungroup()
+effects_mat &lt;- select(effectsdf, -deletion) |&gt; as.matrix()
+rownames(effects_mat) &lt;- effectsdf$deletion
+
+# # In case you&#39;re curious if there&#39;s a relationship to differential expression of TFs between species (there isn&#39;t):
+# # ordering by expression difference (lfc) of TFs between species
+# tf_order &lt;- TFdf |&gt; filter(common %in% goodTFs &amp; experiment == &quot;LowN&quot;) |&gt; 
+#   arrange(desc(effect_size_species)) |&gt; select(common) |&gt; pull()
+# tf_order &lt;- c(tf_order, setdiff(goodTFs, tf_order))
+# # or mean expression level (also not related):
+# getMeanExpr &lt;- function(.gene_idx) {
+#   return(mean(counts[.gene_idx,]))
+# }
+# tf_order &lt;-  TFdf |&gt; filter(common %in% setdiff(goodTFs, &quot;HAP1&quot;)) |&gt; 
+#   select(common, gene_name) |&gt; unique()
+# 
+# tf_order$mean_expr &lt;- map(tf_order$gene_name, getMeanExpr) |&gt; 
+#   unlist() 
+# tf_order &lt;- arrange(tf_order, desc(mean_expr)) |&gt; select(common) |&gt; pull()
+# tf_order &lt;- c(tf_order, &quot;HAP1&quot;)
+col_fun &lt;- colorRamp2(c(0, 50, 300), c(&quot;blue&quot;, &quot;yellow&quot;, &quot;red&quot;))
+p &lt;- Heatmap(effects_mat, col = col_fun, na_col = &quot;grey80&quot;,
+             column_order = c(&quot;cer_TP1&quot;, &quot;par_TP1&quot;, &quot;cer_TP3&quot;, &quot;par_TP3&quot;, 
+                              &quot;hyc_TP1&quot;, &quot;hyp_TP1&quot;, &quot;hyc_TP3&quot;, &quot;hyp_TP3&quot;),
+             # row_order = tf_order,
+             cell_fun = function(j, i, x, y, width, height, fill) {
+               output &lt;- if_else(!(is.na(effects_mat[i, j])), 
+                                 true = as.character(effects_mat[i, j]), 
+                                 false = &quot;-&quot;)
+               grid.text(output, x, y, gp = gpar(fontsize = 10))
+             })
+p</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<pre class="r"><code># # version including TP2
+# pdf(&quot;../../aligning_the_molecular_phenotype/paper_figures/TFdel/TFdel_heatmap_all3tps.pdf&quot;, 
+#     width = 5, height = 8)
+# Heatmap(effects_mat, col = col_fun, na_col = &quot;grey80&quot;,
+#         column_order = c(&quot;cer_TP1&quot;, &quot;par_TP1&quot;, &quot;cer_TP2&quot;, &quot;par_TP2&quot;, &quot;cer_TP3&quot;, &quot;par_TP3&quot;, 
+#                          &quot;hyc_TP1&quot;, &quot;hyp_TP1&quot;, &quot;hyc_TP2&quot;, &quot;hyp_TP2&quot;, &quot;hyc_TP3&quot;, &quot;hyp_TP3&quot;),
+#         # row_order = tf_order,
+#         cell_fun = function(j, i, x, y, width, height, fill) {
+#           output &lt;- if_else(!(is.na(effects_mat[i, j])), 
+#                             true = as.character(effects_mat[i, j]), 
+#                             false = &quot;-&quot;)
+#           grid.text(output, x, y, gp = gpar(fontsize = 10))
+#         })
+# dev.off()
+
+### Repeating with sham, all TFdels were 2 randomly sampled WT replicates
+effectsdf &lt;- TFdeldf_sham1 |&gt; # change to sham2 to see if random sampling matters
+  filter(timepoint != &quot;TP2&quot;) |&gt; 
+  group_by(deletion, organism, timepoint) |&gt; 
+  summarise(nGenes = sum(abs(lfc) &gt; eff_thresh &amp; 
+                           padj &lt; p_thresh)) |&gt; 
+  pivot_wider(id_cols = c(&quot;deletion&quot;), 
+              names_from = c(&quot;organism&quot;, &quot;timepoint&quot;), 
+              values_from = &quot;nGenes&quot;) |&gt; 
+  ungroup()
+effects_mat &lt;- select(effectsdf, -deletion) |&gt; as.matrix()
+rownames(effects_mat) &lt;- effectsdf$deletion
+
+col_fun &lt;- colorRamp2(c(0, 50, 300), c(&quot;blue&quot;, &quot;yellow&quot;, &quot;red&quot;))
+p &lt;- Heatmap(effects_mat, col = col_fun, na_col = &quot;grey80&quot;,
+             column_order = c(&quot;cer_TP1&quot;, &quot;par_TP1&quot;, &quot;cer_TP3&quot;, &quot;par_TP3&quot;, 
+                              &quot;hyc_TP1&quot;, &quot;hyp_TP1&quot;, &quot;hyc_TP3&quot;, &quot;hyp_TP3&quot;),
+             # row_order = tf_order,
+             cell_fun = function(j, i, x, y, width, height, fill) {
+               output &lt;- if_else(!(is.na(effects_mat[i, j])), 
+                                 true = as.character(effects_mat[i, j]), 
+                                 false = &quot;-&quot;)
+               grid.text(output, x, y, gp = gpar(fontsize = 10))
+             })
+p</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-2-2.png" width="672" /></p>
+</div>
+<div id="volcano-plots-to-compare-power-bwtn-species"
+class="section level2">
+<h2>Volcano plots to compare power bwtn species</h2>
+<pre class="r"><code># basic volcano plot to compare power
+makeVolcanoPlot &lt;- function(.tfdeldf, .tf, .org, .timepoint) {
+  plotdf &lt;- .tfdeldf |&gt; filter(organism == .org &amp;
+                                 timepoint == .timepoint &amp;
+                                 deletion == .tf)
+  ggplot(plotdf, aes(x = lfc, y = -log10(pval))) +
+    geom_point(aes(color = padj &lt; p_thresh)) +
+    ylim(c(0, 15)) +
+    xlim(c(-5, 5))
+}
+
+# At each TP, compare all 4 species with volcano plots
+# One example where Spar has flat pvals:
+makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;YAP1&quot;, .org = &quot;cer&quot;, .timepoint = &quot;TP3&quot;)</code></pre>
+<pre><code>## Warning: Removed 40 rows containing missing values or values outside the scale range
+## (`geom_point()`).</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;YAP1&quot;, .org = &quot;par&quot;, .timepoint = &quot;TP3&quot;)
+# One example where Scer does:
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;MET28&quot;, .org = &quot;cer&quot;, .timepoint = &quot;TP1&quot;)
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;MET28&quot;, .org = &quot;par&quot;, .timepoint = &quot;TP1&quot;)
+# Example where Spar has a ton of TFdel replicates:
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;HAP5&quot;, .org = &quot;cer&quot;, .timepoint = &quot;TP1&quot;)
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;HAP5&quot;, .org = &quot;par&quot;, .timepoint = &quot;TP1&quot;)
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;HAP5&quot;, .org = &quot;cer&quot;, .timepoint = &quot;TP3&quot;)
+#makeVolcanoPlot(.tfdeldf = TFdeldf, .tf = &quot;HAP5&quot;, .org = &quot;par&quot;, .timepoint = &quot;TP3&quot;)
+# Spar has more detected, but Scer does also have a handful of sig (mainly TP3)</code></pre>
+</div>
+<div id="deep-dive-ure2-gat1-and-gln3" class="section level2">
+<h2>Deep dive: URE2, GAT1, and GLN3</h2>
+<pre class="r"><code>makeUpsetPlot(.df = filter(TFdeldf, organism == &quot;cer&quot;),
+              .group_name = &quot;deletion&quot;, 
+              .group_members = c(&quot;GLN3&quot;, &quot;GAT1&quot;, &quot;URE2&quot;),
+              .item_names = &quot;gene_name&quot;)</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<pre class="r"><code># also true in par, hyc, hyp, but GAT1 and URE2 just have way fewer single effects and GLN3 has way more:
+makeUpsetPlot(.df = filter(TFdeldf, organism == &quot;par&quot;),
+              .group_name = &quot;deletion&quot;, 
+              .group_members = c(&quot;GLN3&quot;, &quot;GAT1&quot;, &quot;URE2&quot;),
+              .item_names = &quot;gene_name&quot;)</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-4-2.png" width="672" /></p>
+<pre class="r"><code>makeUpsetPlot(.df = filter(TFdeldf, organism == &quot;hyc&quot;),
+              .group_name = &quot;deletion&quot;, 
+              .group_members = c(&quot;GLN3&quot;, &quot;GAT1&quot;, &quot;URE2&quot;),
+              .item_names = &quot;gene_name&quot;)</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-4-3.png" width="672" /></p>
+<pre class="r"><code>makeUpsetPlot(.df = filter(TFdeldf, organism == &quot;hyp&quot;),
+              .group_name = &quot;deletion&quot;, 
+              .group_members = c(&quot;GLN3&quot;, &quot;GAT1&quot;, &quot;URE2&quot;),
+              .item_names = &quot;gene_name&quot;)</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-4-4.png" width="672" /></p>
+<pre class="r"><code># so Spar&#39;s URE2-GAT1-GLN3 environment is dominant in the hybrid. 
+# Scer has much higher GAT1 expression, but Spar&#39;s GLN3 deletion has more effect
+# Other big difference: Scer has about 50 GAT1-URE2 shared genes, where Spar and hybrid only have 3-5
+# What are these genes?
+cer_tab &lt;- TFdeldf |&gt; filter(deletion %in% c(&quot;GAT1&quot;, &quot;URE2&quot;) &amp; 
+                     organism == &quot;cer&quot;) |&gt; select(gene_name) |&gt; 
+  table() |&gt; sort(decreasing = TRUE)
+cer_genes &lt;- rownames(cer_tab)[cer_tab == 2]
+par_tab &lt;- TFdeldf |&gt; filter(deletion %in% c(&quot;GAT1&quot;, &quot;URE2&quot;) &amp; 
+                                organism == &quot;par&quot;) |&gt; select(gene_name) |&gt; 
+  table() |&gt; sort(decreasing = TRUE)
+par_genes &lt;- rownames(par_tab)[par_tab == 2]
+intersect(cer_genes, par_genes) # DUR12, MEP1, both urea/ammonia enzymes</code></pre>
+<pre><code>## character(0)</code></pre>
+<pre class="r"><code># where are they in non-Scer organisms?
+TFdeldf |&gt; filter(gene_name %in% setdiff(cer_genes, par_genes)) |&gt; 
+  select(deletion, organism) |&gt; table()</code></pre>
+<pre><code>##         organism
+## deletion cer hyc hyp par
+##   ACE2     4   4   8   3
+##   AFT1     4   4   8   9
+##   ARG80    4   4   8   0
+##   ARG81    4   4   8   9
+##   BAS1     4   0   0   9
+##   CBF1     4   0   0   9
+##   CHA4     4   4   8   9
+##   DAL80    4   4   8   9
+##   FKH1     4   4   8   9
+##   GAT1     4   3   5   9
+##   GCN4     4   0   0   9
+##   GCR2     4   4   8   9
+##   GLN3     4   4   8   9
+##   GZF3     4   4   8   9
+##   HAP1     4   4   8   9
+##   HAP2     4   4   8   9
+##   HAP3     4   4   8   9
+##   HAP4     4   4   8   9
+##   HAP5     4   4   8   9
+##   INO2     4   4   8   3
+##   INO4     4   4   8   9
+##   LEU3     4   4   8   9
+##   MBP1     4   4   8   9
+##   MET28    4   4   8   9
+##   MIG1     4   4   8   9
+##   MSN2     4   4   8   9
+##   NRG1     4   4   8   9
+##   PHD1     4   4   8   9
+##   PHO4     4   4   8   9
+##   RFX1     4   4   8   9
+##   RGT1     4   4   8   9
+##   RIM101   4   4   8   6
+##   ROX1     4   4   8   9
+##   RPN4     4   4   8   9
+##   RTG1     4   0   0   9
+##   RTG3     4   3   6   9
+##   SKN7     4   4   8   9
+##   SOK2     4   4   8   9
+##   STB5     4   1   2   9
+##   SUM1     4   4   8   3
+##   SWI4     2   4   8   9
+##   SWI5     4   4   8   0
+##   TEC1     4   4   8   9
+##   URE2     4   4   8   6
+##   YAP1     4   0   0   9
+##   ZAP1     2   4   8   9</code></pre>
+<pre class="r"><code># two conclusions: 
+# 1) either both parents have a lot of effects or both hybrid alleles do (GLN3, GCR2, MET28 are exceptions where all 4 have many effects)
+# 2) when there is a stark difference in which TF affects which organism, the Scer parental gene copies are most sensitive (SOK2, STB5, RTG3, URE2, GZF3, GAT1, GCN4, ARG81)
+
+# what clusters are these genes in?
+
+# TODO: b/c we&#39;re not doing clustering for this TFdel paper, change to &quot;conserved decreasing&quot; and &quot;conserved increasing&quot; (and maybe a third &quot;uncorrelated&quot; category if you want to use it? Only if it&#39;s helpful to provide biological insight with the DALs)
+
+# finaldf |&gt; filter(gene_name %in% setdiff(cer_genes, par_genes)) |&gt; 
+#   select(cer, par) |&gt; table() # heavily conserved, but even split between 1-1 and 2-2
+# gene_idxs11 &lt;- finaldf |&gt; filter(gene_name %in% setdiff(cer_genes, par_genes) &amp;
+#                                    cer == 1 &amp; par == 1) |&gt; select(gene_name) |&gt; pull()
+# gene_idxs22 &lt;- finaldf |&gt; filter(gene_name %in% setdiff(cer_genes, par_genes) &amp;
+#                                    cer == 2 &amp; par == 2) |&gt; select(gene_name) |&gt; pull()
+# getGOSlimDf(.idxs = gene_idxs11, .group_name = &quot;GAT1_URE2_ScerUnique11&quot;)
+# Conserved increasing: 12 catabolic genes (including allatonin degredation genes DALs 1, 2, 4, 7)
+# getGOSlimDf(.idxs = gene_idxs22, .group_name = &quot;GAT1_URE2_ScerUnique22&quot;) 
+# Conserved decreasing: 18 nucleolus/15 rRNA processing genes, 6 helicase (mainly DEAD box RNA helicases for rRNA processing)
+
+# # What timepoint is the dynamics affected? If this is related to the URE2-GAT1 interaction, we&#39;d expect the LowN timepoint
+# # 1-1
+# plotGenesTFdel(.gene_idxs = gene_idxs11, .tf = &quot;GAT1&quot;) # yes later timepoint, mainly Scer but a little Spar
+# plotGenesTFdel(.gene_idxs = gene_idxs11, .tf = &quot;URE2&quot;) # both timepoints, just Scer
+# # what about hybrid? 
+# plotGenesTFdel(.gene_idxs = gene_idxs11, .tf = &quot;GAT1&quot;, .parents_or_hybrid = &quot;hybrid&quot;)
+# plotGenesTFdel(.gene_idxs = gene_idxs11, .tf = &quot;URE2&quot;, .parents_or_hybrid = &quot;hybrid&quot;)
+# # Interestingly there is an effect at the early timepoint in both hybrid alleles. Why weren&#39;t they flagged as dynamic effects?
+# effectsdf |&gt; filter(organism %in% c(&quot;hyc&quot;, &quot;hyp&quot;) &amp;
+#                      deletion %in% c(&quot;GAT1&quot;, &quot;URE2&quot;) &amp;
+#                      gene_name %in% gene_idxs11) |&gt; select(effect, deletion) |&gt; table()
+# # They&#39;re all URE2 only, but there is a slight effect in GAT1
+# TFdeldf |&gt; filter(organism %in% c(&quot;hyc&quot;, &quot;hyp&quot;) &amp;
+#                     deletion == &quot;GAT1&quot; &amp;
+#                     timepoint == &quot;TP1&quot; &amp;
+#                     gene_name %in% gene_idxs11) |&gt; 
+#   arrange(desc(lfc)) # Only enough power to detect a couple, namely the very classy haze protective factor HPF1, which reduces cloudiness in white wines
+# # But it&#39;s not just HPF1/YOL155C causing this -- most hybrid orthologs are up decently in URE2, just without significant pvalues
+# 
+# # 2-2
+# plotGenesTFdel(.gene_idxs = gene_idxs22, .tf = &quot;GAT1&quot;) # yowza later timepoint, only Scer
+# plotGenesTFdel(.gene_idxs = gene_idxs22, .tf = &quot;URE2&quot;) # mostly later timepoint, also yowza, only Scer
+# # hybrid
+# plotGenesTFdel(.gene_idxs = gene_idxs22, .tf = &quot;GAT1&quot;, .parents_or_hybrid = &quot;hybrid&quot;)
+# plotGenesTFdel(.gene_idxs = gene_idxs22, .tf = &quot;URE2&quot;, .parents_or_hybrid = &quot;hybrid&quot;)
+# # Here the hybrid effect at TP3 is in the opposite direction (and weaker)
+# 
+# # Taking stock: identified ~50 genes that had dynamics affected by both GAT1 and URE2 deletion
+# # in Scer but not in Spar or hybrid alleles
+# # Interesting b/c GAT1 is expressed much higher in Scer (and hyc allele transiently in response to LowN)
+# # These genes are 50-50 split between increasing and decreasing cluster, but they have all conserved dynamics btwn species
+# # GAT1/URE2 deletion affects late timepoint the strongest in Scer, no effect in Spar
+# # in hybrid, there is some evidence of an early timepoint effect---especially URE2 delete on increasing genes
+# # but the late timepoint effect is really only seen in Scer
+# 
+# # investigating GAT1 Scer_only regulated genes
+# # first increasing genes
+# gene_idxs_par &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                               .clust = 2, .org = &quot;par&quot;)
+# gene_idxs_cer &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                               .clust = 2, .org = &quot;cer&quot;)
+# plotdf &lt;- getGroupDf(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                      .clust = 2, .genes_cer = gene_idxs_cer,
+#                      .genes_par = gene_idxs_par)
+# ggplot(plotdf, aes(x = lfc_cer, y = lfc_par)) + 
+#   geom_point(aes(color = tf_effect)) +
+#   geom_abline(slope = 1, intercept = 0)
+# # Scer-only TF response, conserved dynamics
+# gene_idxs &lt;- plotdf |&gt; filter(tf_effect == &quot;Scer only&quot; &amp; dynamics == &quot;conserved&quot; &amp;
+#                                 par == 2) |&gt; 
+#   select(gene_name) |&gt; pull()
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = gene_idxs)
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = sample(gene_idxs, size = 12), .single_genes = TRUE, .normalization = &quot;scale&quot;)
+# # (there are no decreasing genes for this cluster)
+# 
+# # investigating GAT1 Scer_only regulated genes
+# # first increasing genes
+# gene_idxs_par &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                               .clust = 1, .org = &quot;par&quot;)
+# gene_idxs_cer &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                               .clust = 1, .org = &quot;cer&quot;)
+# plotdf &lt;- getGroupDf(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = 1,
+#                      .clust = 1, .genes_cer = gene_idxs_cer,
+#                      .genes_par = gene_idxs_par)
+# ggplot(plotdf, aes(x = lfc_cer, y = lfc_par)) + 
+#   geom_point(aes(color = tf_effect)) +
+#   geom_abline(slope = 1, intercept = 0)
+# # Scer-only TF response, conserved dynamics
+# gene_idxs &lt;- plotdf |&gt; filter(tf_effect == &quot;Scer only&quot; &amp; dynamics == &quot;conserved&quot; &amp;
+#                                 par == 1) |&gt; 
+#   select(gene_name) |&gt; pull()
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = gene_idxs)
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = sample(gene_idxs, size = 12), .single_genes = TRUE, .normalization = &quot;scale&quot;)
+# # next decreasing genes
+# gene_idxs_par &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = -1,
+#                               .clust = 1, .org = &quot;par&quot;)
+# gene_idxs_cer &lt;- getGeneGroup(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = -1,
+#                               .clust = 1, .org = &quot;cer&quot;)
+# plotdf &lt;- getGroupDf(.tf = &quot;GAT1&quot;, .tp = &quot;TP3&quot;, .lfc_sign = -1,
+#                      .clust = 1, .genes_cer = gene_idxs_cer,
+#                      .genes_par = gene_idxs_par)
+# ggplot(plotdf, aes(x = lfc_cer, y = lfc_par)) + 
+#   geom_point(aes(color = tf_effect)) +
+#   geom_abline(slope = 1, intercept = 0)
+# # Scer-only TF response, conserved dynamics
+# gene_idxs &lt;- plotdf |&gt; filter(tf_effect == &quot;Scer only&quot; &amp; dynamics == &quot;conserved&quot; &amp;
+#                                 par == 1) |&gt; 
+#   select(gene_name) |&gt; pull()
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = gene_idxs)
+# plotGenesTFdel(.tf = &quot;GAT1&quot;, .gene_idxs = sample(gene_idxs, size = 12), .single_genes = TRUE, .normalization = &quot;scale&quot;)</code></pre>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
