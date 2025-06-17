@@ -4,3 +4,4 @@
 *.Ruserdata
 *ReadsPerGene.out.tab
 *.xlsx
+*.DS_Store
