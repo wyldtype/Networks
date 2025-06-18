@@ -248,17 +248,11 @@ $(document).ready(function () {
 <li>
   <a href="about.html">Functions</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Data Cleaning
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="data_cleaning.html">Import and clean count data</a>
-    </li>
-  </ul>
+<li>
+  <a href="data_cleaning.html">Data Cleaning</a>
+</li>
+<li>
+  <a href="DESeq2.html">DESeq2</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -290,7 +284,7 @@ p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
 eff_thresh &lt;- 1
 TFdel_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/yeastract_46TFs.csv&quot;, col_names = FALSE, col_select = c(1,2), delim = &quot;;&quot;) # gets some warnings, but so far has been fine</code></pre>
 <pre><code>## Rows: 46 Columns: 2
-## ── Column specification ───────────────────────────────────────────────────────
+## ── Column specification ─────────────────────────────────────────────────────────────
 ## Delimiter: &quot;;&quot;
 ## chr (2): X1, X2
 ## 

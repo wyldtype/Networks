@@ -6,17 +6,14 @@ title: "DESeq2"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r data-organizing, cache=TRUE}
 sapply(c("tidyr", "dplyr", "purrr", "ggplot2", "ggpubr", "DESeq2"), require, character.only=TRUE)
 load("data_files/CleanedCounts.RData")
 eff_thresh <- 1
 p_thresh <- 0.05
 GeneNames <- rownames(counts)
-```
 
-## Data organizing 
-
-```{r}
+# data organizing
 counts <- list(cerTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "cer"],
                parTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "par"],
                hycTP1 = counts[,sample_info$time_point_num == 0 & sample_info$organism == "hyb" & sample_info$allele == "cer"],
@@ -62,10 +59,8 @@ results(test, contrast = c("genotype", "YAP1delete", "WT"),
         alpha = 0.05)[,"padj"] |> table(useNA = "always")
 ```
 Looping through counts/info to remove genotypes that don't have 2 replicates at a certain timepoint.
-```{r}
-
-# TODO: This removes TFs without 2 reps at ALL timepoints, we just want to remove them at the TP where they're missing replicates
-
+```{r filter-genotypes, cache=TRUE}
+# Note: b/c we split the individual timepoints into separate info dataframes, this only removes genotypes from the timepoint where they have no replicates (using a 2d table that includes timepoint is a relic but is helpful for reminding us what timepoint we are looking at)
 filterGenotypes <- function(.info, .counts) {
   tab <- .info |> select(genotype, time_point_str) |> table()
   no_rep_genotypes <- rownames(tab)[which(tab < 2)]
@@ -84,7 +79,7 @@ infos$hycTP1 |> select(genotype, time_point_str) |> table()
 ```
 Converting genotype to a factor, after removing genotypes,
 so different number of levels per dataset.
-```{r}
+```{r factor-genotype, cache=TRUE}
 infos <- map(infos, mutate, 
              genotype = genotype |> 
                as.factor() |> 
@@ -102,7 +97,7 @@ dds <- map2(counts, infos, \(x, y) {
 ## Model fitting
 
 This takes the majority of the time:
-```{r}
+```{r deseq2, cache=TRUE, cache.extra=list(counts, infos), dependson="data-organizing"}
 library("BiocParallel")
 register(MulticoreParam(4))
 dds <- map(dds, DESeq, parallel = TRUE)
@@ -196,7 +191,7 @@ sum(TFdeldf$padj >= p_thresh) # should have way fewer significant effects
 
 Rationale: Because there's such a difference in power between having 2 TFdel replicates versus 30 WT replicates, we want to verify that the 2 TFdel replicates are detecting more and different DE genes than randomly leaving out 2 WT replicates and treating them like TFdels would.
 
-```{r}
+```{r deseq2_shams, cache=TRUE, cache.extra=list(counts, infos), dependson="data-organizing"}
 set.seed(23)
 # looping through counts, change counts for each TFdel to be 2 randomly sampled WT samples (or however many replicates that TF has)
 counts_sham1 <- map2(counts, infos, \(x, y) {

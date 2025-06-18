@@ -248,17 +248,11 @@ $(document).ready(function () {
 <li>
   <a href="about.html">Functions</a>
 </li>
-<li class="dropdown">
-  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-    Data Cleaning
-     
-    <span class="caret"></span>
-  </a>
-  <ul class="dropdown-menu" role="menu">
-    <li>
-      <a href="data_cleaning.html">Import and clean count data</a>
-    </li>
-  </ul>
+<li>
+  <a href="data_cleaning.html">Data Cleaning</a>
+</li>
+<li>
+  <a href="DESeq2.html">DESeq2</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -282,10 +276,10 @@ $(document).ready(function () {
 <p>Here’s where we load the 3’ tagseq samples, normalize them, and
 assemble them into a single count matrix.</p>
 <p>Working with RNAseq data published in Krieger et al. 2020</p>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
-##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
-##    openxlsx matrixStats 
-##        TRUE        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr    openxlsx 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
+## matrixStats 
+##        TRUE</code></pre>
 <div id="reading-in-tagseq-data-and-separating-allele-specific-counts"
 class="section level2">
 <h2>Reading in tagseq data and separating allele-specific counts</h2>
@@ -369,16 +363,16 @@ test_cpm &lt;- countsPerMillionAllele(.cts_cer = tagseq_cer[,-1],
 ((test_count/(colSums(tagseq_cer[,-1], na.rm = TRUE) + 
                 colSums(tagseq_par[,-1], na.rm = TRUE))[test_colIdx])*1e6) %&gt;% 
   round() # what it should be</code></pre>
-<pre><code>##   AFT1_TP1_cer_P4C2_B5_H10_GS9a
-## 1                            78</code></pre>
+<pre><code>##   TEC1_TP1_cer_C1_H4_D8_GS1
+## 1                       372</code></pre>
 <pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
 <pre><code>## # A tibble: 1 × 1
-##   AFT1_TP1_cer_P4C2_B5_H10_GS9a
-##                           &lt;dbl&gt;
-## 1                           103</code></pre>
+##   TEC1_TP1_cer_C1_H4_D8_GS1
+##                       &lt;dbl&gt;
+## 1                       333</code></pre>
 <pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
-<pre><code>## AFT1_TP1_cer_P4C2_B5_H10_GS9a 
-##                            78</code></pre>
+<pre><code>## TEC1_TP1_cer_C1_H4_D8_GS1 
+##                       372</code></pre>
 <p>Now we can calculate percent reads mapping to each allele in parental
 samples</p>
 <pre class="r"><code># 1) normalize to counts per million based on total 
@@ -428,13 +422,13 @@ cer_genedf &lt;- plotdf |&gt; filter(organism == &quot;cerSample&quot;) |&gt;
   summarise(avg_pct_cer = mean(pct_cer, na.rm = TRUE))
 hist(cer_genedf$avg_pct_cer, breaks = 50)
 abline(v = 0.9, col = &quot;red&quot;)</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
 <pre class="r"><code>par_genedf &lt;- plotdf |&gt; filter(organism == &quot;parSample&quot;) |&gt; 
   group_by(gene) |&gt; 
   summarise(avg_pct_cer = mean(pct_cer, na.rm = TRUE))
 hist(par_genedf$avg_pct_cer, breaks = 50)
 abline(v = 0.1, col = &quot;red&quot;)</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-4-2.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-3-2.png" width="672" /></p>
 <p>As expected, genes from Scer samples have a high percentage of reads
 mapping to the Scer gene ortholog and vice versa for Spar.</p>
 </div>
@@ -624,18 +618,16 @@ standardizeGS2018ID(&quot;G8_G12_GS2018&quot;)</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table() </code></pre>
 <pre><code>## well_flask_ID
-##  A1_G6_GS2018  A2_G6_GS2018  A7_G6_GS2018  A8_G6_GS2018  B1_G6_GS2018 
-##             2             2             1             1             2 
-##  B2_G6_GS2018  B7_G6_GS2018  B8_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018 
-##             2             1             1             2             2 
-##  C7_G6_GS2018  C8_G6_GS2018  D1_G6_GS2018  D2_G6_GS2018  D7_G6_GS2018 
-##             1             1             2             2             1 
-##  D8_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 E7_G12_GS2018 E8_G12_GS2018 
-##             1             2             2             1             1 
-## F1_G12_GS2018 F2_G12_GS2018 F7_G12_GS2018 F8_G12_GS2018 G1_G12_GS2018 
-##             2             2             1             1             2 
-## G2_G12_GS2018 G7_G12_GS2018 G8_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
-##             2             1             1             1             2 
+##  A1_G6_GS2018  A2_G6_GS2018  A7_G6_GS2018  A8_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018 
+##             2             2             1             1             2             2 
+##  B7_G6_GS2018  B8_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018  C7_G6_GS2018  C8_G6_GS2018 
+##             1             1             2             2             1             1 
+##  D1_G6_GS2018  D2_G6_GS2018  D7_G6_GS2018  D8_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 
+##             2             2             1             1             2             2 
+## E7_G12_GS2018 E8_G12_GS2018 F1_G12_GS2018 F2_G12_GS2018 F7_G12_GS2018 F8_G12_GS2018 
+##             1             1             2             2             1             1 
+## G1_G12_GS2018 G2_G12_GS2018 G7_G12_GS2018 G8_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
+##             2             2             1             1             1             2 
 ## H7_G12_GS2018 H8_G12_GS2018 
 ##             1             1</code></pre>
 <pre class="r"><code>cat(&quot;Hybrid samples (all 2s and 4s):\n&quot;)</code></pre>
@@ -676,31 +668,27 @@ sample_info$well_flask_ID[GS2018_idxs] &lt;- sapply(sample_info$well_flask_ID[GS
 <pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table() </code></pre>
 <pre><code>## well_flask_ID
-##  A1_G6_GS2018  A2_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018  C1_G6_GS2018 
-##             3             3             3             3             3 
-##  C2_G6_GS2018  D1_G6_GS2018  D2_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 
-##             3             3             3             3             3 
-## F1_G12_GS2018 F2_G12_GS2018 G1_G12_GS2018 G2_G12_GS2018 H1_G12_GS2018 
-##             3             3             3             3             2 
-## H2_G12_GS2018 
-##             3</code></pre>
+##  A1_G6_GS2018  A2_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018 
+##             3             3             3             3             3             3 
+##  D1_G6_GS2018  D2_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 F1_G12_GS2018 F2_G12_GS2018 
+##             3             3             3             3             3             3 
+## G1_G12_GS2018 G2_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
+##             3             3             2             3</code></pre>
 <pre class="r"><code>cat(&quot;Hybrid samples (should have 6):\n&quot;)</code></pre>
 <pre><code>## Hybrid samples (should have 6):</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table()</code></pre>
 <pre><code>## well_flask_ID
-## A3_G12_GS2018 A4_G12_GS2018 A5_G12_GS2018 A6_G12_GS2018 B3_G12_GS2018 
-##             6             6             6             6             6 
-## B4_G12_GS2018 B5_G12_GS2018 B6_G12_GS2018 C3_G12_GS2018 C4_G12_GS2018 
-##             6             6             6             6             6 
-## C5_G12_GS2018 C6_G12_GS2018 D3_G12_GS2018 D4_G12_GS2018 D5_G12_GS2018 
-##             6             6             6             6             6 
-## D6_G12_GS2018 E3_WT2_GS2018 E4_WT2_GS2018 E5_WT2_GS2018 E6_WT2_GS2018 
-##             6             6             6             6             6 
-## F3_WT2_GS2018 F4_WT2_GS2018 F5_WT2_GS2018 F6_WT2_GS2018 G3_WT2_GS2018 
-##             6             6             6             6             6 
-## G4_WT2_GS2018 G5_WT2_GS2018 G6_WT2_GS2018 H3_WT2_GS2018 H4_WT2_GS2018 
-##             6             6             6             6             6</code></pre>
+## A3_G12_GS2018 A4_G12_GS2018 A5_G12_GS2018 A6_G12_GS2018 B3_G12_GS2018 B4_G12_GS2018 
+##             6             6             6             6             6             6 
+## B5_G12_GS2018 B6_G12_GS2018 C3_G12_GS2018 C4_G12_GS2018 C5_G12_GS2018 C6_G12_GS2018 
+##             6             6             6             6             6             6 
+## D3_G12_GS2018 D4_G12_GS2018 D5_G12_GS2018 D6_G12_GS2018 E3_WT2_GS2018 E4_WT2_GS2018 
+##             6             6             6             6             6             6 
+## E5_WT2_GS2018 E6_WT2_GS2018 F3_WT2_GS2018 F4_WT2_GS2018 F5_WT2_GS2018 F6_WT2_GS2018 
+##             6             6             6             6             6             6 
+## G3_WT2_GS2018 G4_WT2_GS2018 G5_WT2_GS2018 G6_WT2_GS2018 H3_WT2_GS2018 H4_WT2_GS2018 
+##             6             6             6             6             6             6</code></pre>
 <pre class="r"><code># hybrids should have 6, 2 alleles x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint</code></pre>
 <p>Now we can get rid of the “GS” part of the rep name, which can be
 different for the same sample at different timepoints and replacing it
@@ -738,8 +726,8 @@ sample_info |&gt;
 ## override using the `.groups` argument.</code></pre>
 <pre><code>## # A tibble: 0 × 5
 ## # Groups:   new_id, organism, genotype [0]
-## # ℹ 5 variables: new_id &lt;chr&gt;, organism &lt;chr&gt;, genotype &lt;chr&gt;,
-## #   time_point_str &lt;chr&gt;, n_per_org_gen_tp &lt;int&gt;</code></pre>
+## # ℹ 5 variables: new_id &lt;chr&gt;, organism &lt;chr&gt;, genotype &lt;chr&gt;, time_point_str &lt;chr&gt;,
+## #   n_per_org_gen_tp &lt;int&gt;</code></pre>
 <pre class="r"><code># updating well_flask_ID 
 sample_info$well_flask_ID &lt;- sample_info$new_id
 sample_info &lt;- select(sample_info, -&quot;new_id&quot;)
@@ -784,7 +772,7 @@ class="section level2">
 libsizes &lt;- colSums(counts) # these counts include all samples, hybrid and parental
 ggplot(tibble(libsize = libsizes), aes(x = libsize)) + geom_histogram()</code></pre>
 <pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
 <pre class="r"><code>sort(libsizes)[c(1:20)]</code></pre>
 <pre><code>##  GLN3_TP3_hyc_remnants_B3_C5_GS11  GLN3_TP3_hyp_remnants_B3_C5_GS11 
 ##                            105424                            105759 
@@ -827,7 +815,7 @@ ggplot(plotdf, aes(x = cer, y = par)) +
   geom_rect(xmin = 0, xmax = 100000, ymin = 0, ymax = 100000, color = &quot;blue&quot;, alpha = 0) +
   geom_vline(xintercept = 100000, color = &quot;blue&quot;, alpha = 0.5) +
   geom_hline(yintercept = 100000, color = &quot;blue&quot;, alpha = 0.5)</code></pre>
-<p><img src="data_cleaning_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<p><img src="data_cleaning_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
 <pre class="r"><code># (the samples within the blue box will be removed by our library size threshold below)
 # and no other samples should be below the blue lines but not within the blue box</code></pre>
 <p>Conclusion: yes, very correlated.</p>
@@ -856,14 +844,14 @@ test_count &lt;- test_cts[test_rowIdx, test_colIdx]
 test_cpm &lt;- countsPerMillion(test_cts)
 test_cpm_cpm &lt;- countsPerMillion(test_cpm)
 ((test_count/colSums(test_cts, na.rm = TRUE)[test_colIdx])*1e6) %&gt;% round() # what it should be</code></pre>
-<pre><code>## FKH1_TP2_par_P2_B4_B7_GS5 
-##                        42</code></pre>
+<pre><code>## WT_TP1_par_P5_G2_G6_GS13 
+##                      204</code></pre>
 <pre class="r"><code>test_cts[test_rowIdx, test_colIdx] # what it is before using our function</code></pre>
-<pre><code>## [1] 21</code></pre>
+<pre><code>## [1] 131</code></pre>
 <pre class="r"><code>test_cpm[test_rowIdx, test_colIdx] # what it is using our function</code></pre>
-<pre><code>## [1] 42</code></pre>
+<pre><code>## [1] 204</code></pre>
 <pre class="r"><code>test_cpm_cpm[test_rowIdx, test_colIdx] # what it is if you run cpm too many times (should be the same as test_cpm)</code></pre>
-<pre><code>## [1] 42</code></pre>
+<pre><code>## [1] 204</code></pre>
 <p>Actually normalizing</p>
 <pre class="r"><code>counts_unnorm &lt;- counts
 counts &lt;- countsPerMillion(counts)</code></pre>

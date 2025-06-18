@@ -7,7 +7,7 @@ navbar:
     - text: "Functions"
       href: about.html
     - text: "Data Cleaning"
-      menu:
-      - text: "Import and clean count data"
-        href: data_cleaning.html
+      href: data_cleaning.html
+    - text: "DESeq2"
+      href: DESeq2.html
 output_dir: "docs"

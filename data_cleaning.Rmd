@@ -12,7 +12,7 @@ Here's where we load the 3' tagseq samples, normalize them, and assemble them in
 
 Working with RNAseq data published in Krieger et al. 2020
 
-```{r, echo = FALSE}
+```{r package-loading, cache=TRUE, echo = FALSE}
 sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "openxlsx", "matrixStats"), require, character.only=TRUE)
 ```
 
@@ -20,7 +20,7 @@ sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "openxlsx", "m
 
 Reading in quantified RNAseq counts as individual *.ReadsPerGene.out.tab files, one file per sample. Counts for each allele of each gene are on separate rows. Systematic gene names are prepended with the species name (example: cer_YGR192C is the TDH3 ortholog from S. cerevisiae). Logistically, it'll work better for the analysis if we condense this format into only one row per gene (example: one YGR192C row). To do this, we first have to separate the counts for the Scer ortholog from the counts for the Spar ortholog:
 
-```{r}
+```{r, cache=TRUE, dependson="package-loading"}
 tagseq <- list.files("data_files/tagseq_counts/", 
                      full.names = TRUE) |> 
   map(read_table, col_names = FALSE, show_col_types = FALSE) |> 

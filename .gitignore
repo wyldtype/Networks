@@ -5,3 +5,4 @@
 *ReadsPerGene.out.tab
 *.xlsx
 *.DS_Store
+**/*_cache/
