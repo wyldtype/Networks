@@ -181,9 +181,10 @@ counts <- apply(sample_info, 1, \(x) {
   if (org == "Saccharomyces cerevisiae x Saccharomyces paradoxus") {
     cer_countcol <- tagseq_cer[,sample_name]
     par_countcol <- tagseq_par[,sample_name]
-    output <- cbind(cer_countcol, par_countcol)
+    hyb_countcol <- tagseq_cer[,sample_name] + tagseq_par[,sample_name]
+    output <- cbind(cer_countcol, par_countcol, hyb_countcol)
     colnames(output) <- c(gsub("_hyb_", "_hyc_", sample_name),
-                          gsub("_hyb_", "_hyp_", sample_name))
+                          gsub("_hyb_", "_hyp_", sample_name), sample_name)
     return(output)
   }
 }) |> Reduce(f = cbind)
@@ -192,7 +193,7 @@ cat("All gene names are the same in combined count matrix and Scer count matrix:
     \n")
 cat("All gene names are the same in combined count matrix and Spar count matrix:", all(rownames(counts) == rownames(tagseq_par)), "
     \n")
-# adding second row for each hybrid allele in info df
+# adding two more rows for each hybrid allele in info df
 sample_info <- map(c(1:nrow(sample_info)), \(i) {
   x <- sample_info[i,]
   org <- sample_info[i,"organism"]
@@ -201,7 +202,7 @@ sample_info <- map(c(1:nrow(sample_info)), \(i) {
     x_par <- x
     x_cer["sample_name"] <- gsub("_hyb_", "_hyc_", x_cer["sample_name"])
     x_par["sample_name"] <- gsub("_hyb_", "_hyp_", x_par["sample_name"])
-    output <- bind_rows(x_cer, x_par)
+    output <- bind_rows(x_cer, x_par, x)
     return(output)
   }
   if (org != "Saccharomyces cerevisiae x Saccharomyces paradoxus") {
@@ -221,7 +222,7 @@ sample_info$organism <- map_chr(sample_info$sample_name, function(s) {
   if (grepl("_par_", s)) {
     return("par")
   }
-  if (grepl("_hy[pc]_", s)) {
+  if (grepl("_hy[bpc]_", s)) {
     return("hyb")
   }
 })
@@ -233,6 +234,9 @@ sample_info$allele <- map_chr(sample_info$sample_name, function(s) {
   }
   if (grepl("_par_", s) | grepl("_hyp_", s)) {
     return("par")
+  }
+  if (grepl("_hyb_", s)) {
+    return("hyb")
   }
 })
 
@@ -287,14 +291,14 @@ sample_info |> filter(organism != "hyb") |>
   table() |> table() # (0s are combinations of organism/well_flask_ID/genotype that don't exist, which is common because many well flask IDs are only present in one organism or genotype)
 ```
 
-And Hybrids currently have mainly 2-4:
+And Hybrids currently have mainly 3-6:
 
 ```{r, message=FALSE}
 sample_info |> filter(organism == "hyb") |> 
   select(well_flask_ID, genotype) |> 
   table() |> table()
 ```
-By the end of this section, every parental sample should still have at most 3 entries and most should have 3 (6 for hybrids, one for each of the two alleles).
+By the end of this section, every parental sample should still have at most 3 entries and most should have 3 (9 for hybrids, one for each of the two alleles plus summed alleles).
 
 First of all (based on personal communication), the GS2018 samples (which are the majority of the WT samples) have a different well_flask_ID for the 1 hr sample than for 0 or 16 hr. For each row in the well plate (A-H), these are the numbers that are paired: 1-7, 2-8, 3-9, 4-10, 5-11, 6-12:
 ```{r}
@@ -320,7 +324,7 @@ Before applying:
 cat("Parent samples (all 1s and 2s):\n")
 sample_info |> filter(organism %in% c("cer", "par") & grepl("GS2018", well_flask_ID)) |> 
   select(well_flask_ID) |> table() 
-cat("Hybrid samples (all 2s and 4s):\n")
+cat("Hybrid samples (all 3s and 6s):\n")
 sample_info |> filter(organism == "hyb" & grepl("GS2018", well_flask_ID)) |> 
   select(well_flask_ID) |> table()
 ```
@@ -336,10 +340,10 @@ After applying:
 cat("Parent samples (should have 3, except for H1, which is missing a timepoint):\n")
 sample_info |> filter(organism %in% c("cer", "par") & grepl("GS2018", well_flask_ID)) |> 
   select(well_flask_ID) |> table() 
-cat("Hybrid samples (should have 6):\n")
+cat("Hybrid samples (should have 9):\n")
 sample_info |> filter(organism == "hyb" & grepl("GS2018", well_flask_ID)) |> 
   select(well_flask_ID) |> table()
-# hybrids should have 6, 2 alleles x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint
+# hybrids should have 9, (hyc, hyp, and hyb) x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint
 ```
 Now we can get rid of the "GS" part of the rep name, which can be different for the same sample at different timepoints and replacing it with the tag immediately before the well_flask_ID in the sample name for non-unique well_flask_IDs
 ```{r}
@@ -394,7 +398,7 @@ sample_info |> filter(organism != "hyb") |>
   table() |> table() # 0s are combinations of organism/well_flask_ID/genotype that don't exist, which is common because many well flask IDs are only present in one organism or genotype
 ```
 
-And for hybrid samples: a) most well flask IDs are represented 6 times, and b) no well flask ID is represented more than 6 times for each organism/condition:
+And for hybrid samples: a) most well flask IDs are represented 9 times, and b) no well flask ID is represented more than 9 times for each organism/condition:
 
 ```{r, message=FALSE}
 sample_info |> filter(organism == "hyb") |> 
