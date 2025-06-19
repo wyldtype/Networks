@@ -7,7 +7,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats"), require, character.only=TRUE)
+sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats", "ggVennDiagram"), require, character.only=TRUE)
 load("data_files/CleanedCounts.RData")
 
 TFnames <- setdiff(unique(gsub("delete", "", sample_info$genotype)), "WT")
@@ -16,14 +16,310 @@ eff_thresh <- 1
 TFdel_lookup <- read_delim("data_files/downloaded_genomes_and_features/yeastract_46TFs.csv", col_names = FALSE, col_select = c(1,2), delim = ";")
 colnames(TFdel_lookup) <- c("common", "systematic")
 ```
+## Classifying genes by their nitrogen response
+```{r measureCI}
+# First helper function for classifyNitrogenResponse
+# Given replicate expression at one timepoint,
+# returns mean and 95% confidence interval
+measureCI <- function(.rep_expr) {
+  mean_expr <- mean(.rep_expr)
+  sd_expr <- sd(.rep_expr)
+  return(list(mean = mean_expr,
+              upper = mean_expr + 1.96*sd_expr,
+              lower = mean_expr - 1.96*sd_expr))
+}
+# # tests for measureCI
+# measureCI(1) |> unlist()
+# measureCI(rnorm(10, mean = 10, sd = 7)) |> unlist()
+```
 
-## Which TFs are differentially expressed between species?
 
-Mean expression in Scer vs Spar, avg across timepoints. Error bars are standard error from replicates.
+```{r areOverlapingCIs}
+# Second helper function
+# Given pairs of confidence intervals calculated by measureCI, returns TRUE if CIs overlap or FALSE if CI_ref is greater or less than CI_test) 
+areOverlapingCIs <- function(.CI_ref, .CI_test) {
+  # check ref > test
+  if (.CI_ref$lower > .CI_test$upper) {
+    return(FALSE)
+  }
+  # check ref < test
+  if (.CI_ref$upper < .CI_test$lower) {
+    return(FALSE)
+  }
+  else {
+    return(TRUE)
+  }
+}
+# # tests for areOverlapingCIs
+# test_ref_ci <- measureCI(rnorm(10, mean = 10, sd = 7))
+# test_test_ci <- measureCI(rnorm(10, mean = 20, sd = 7))
+# areOverlapingCIs(test_ref_ci, test_test_ci) # should be overlapping
+# test_ref_ci <- measureCI(rnorm(10, mean = 10, sd = 3))
+# test_test_ci <- measureCI(rnorm(10, mean = 20, sd = 2))
+# areOverlapingCIs(test_ref_ci, test_test_ci) # shouldn't be overlapping
+# test_ref_ci <- measureCI(1)
+# test_test_ci <- measureCI(2)
+# areOverlapingCIs(test_ref_ci, test_test_ci) # needs replicate measurements
+```
+
+```{r classifyNitrogenResponse}
+classifyNitrogenResponse <- function(.expr_vec, .timepoint_vec) {
+  timepoints <- unique(.timepoint_vec) |> sort(decreasing = FALSE)
+  if (length(timepoints) != 3) {
+    stop("All three timepoints are not represented.\n Represented timepoints:",
+         timepoints, "\n")
+  }
+  tp1CI <- measureCI(.expr_vec[.timepoint_vec == timepoints[1]])
+  tp2CI <- measureCI(.expr_vec[.timepoint_vec == timepoints[2]])
+  tp3CI <- measureCI(.expr_vec[.timepoint_vec == timepoints[3]])
+  # check TP1 vs TP2
+  result12 <- areOverlapingCIs(tp1CI, tp2CI)
+  # check TP2 vs TP3
+  result23 <- areOverlapingCIs(tp2CI, tp3CI)
+  # check TP1 vs TP3
+  result13 <- areOverlapingCIs(tp1CI, tp3CI)
+  if (result12 & result23) {
+    if (result13) {
+      return("none")
+    }
+    if (!result13) {
+      return("gradual")
+    }
+  }
+  if (!result12) {
+    if (result23) {
+      return("early")
+    }
+    if (!result23) {
+      return("both")
+    }
+  }
+  if (!result23) {
+    if (result12) {
+      return("late")
+    }
+    if (!result12) {
+      return("fitzwilliam") # (both, but we shouldn't ever reach this line)
+    }
+  }
+}
+# tests for classifyNitrogenResponse
+test_org <- sample(c("cer", "par", "hyb"), 1)
+test_gene <- sample(rownames(counts), 1)
+test_expr <- counts[test_gene, sample_info$organism == test_org & sample_info$genotype == "WT"] |> as.numeric()
+test_timepoints <- sample_info[sample_info$organism == test_org & sample_info$genotype == "WT", "time_point_num"] |> as.numeric()
+classifyNitrogenResponse(.expr_vec = test_expr,
+                         .timepoint_vec = test_timepoints)
+```
+Plot to see if we visually agree with the test result:
+```{r, cache.extra=plotGenesTFdel, message=FALSE}
+plotGenesTFdel(.gene_idxs = test_gene, .tf = "GCR2", .show_tfdel = FALSE,
+               .normalization = "none", .parents_or_hybrid = "parents")
+plotGenesTFdel(.gene_idxs = test_gene, .tf = "GCR2", .show_tfdel = FALSE,
+               .normalization = "none", .parents_or_hybrid = "hybrid")
+```
+Applying to all genes:
 
 ```{r}
-# TODO: scatter plot Scer vs Spar with geom_text as the TF names
+responsedf <- expand_grid(organism = unique(sample_info$organism),
+                          gene_name = rownames(counts))
+responsedf$response <- map(c(1:nrow(responsedf)), \(i) {
+  org <- responsedf$organism[i]
+  g <- responsedf$gene_name[i]
+  expr_vec <- counts[g, sample_info$organism == org &
+                       sample_info$allele == org &
+                       sample_info$genotype == "WT"] |> as.numeric()
+  time_vec <- sample_info[sample_info$organism == org &
+                            sample_info$allele == org &
+                            sample_info$genotype == "WT", "time_point_num"] |> as.numeric()
+  classifyNitrogenResponse(.expr_vec = expr_vec,
+                           .timepoint_vec = time_vec)
+}) |> unlist()
 ```
+
+How many genes in each response group?
+```{r}
+ggplot(responsedf, aes(x = factor(response,
+                                  levels = c("none", "gradual", "early", "late", "both")))) +
+  geom_histogram(aes(fill = response), stat = "count") +
+  stat_count(binwidth = 1, 
+             geom = 'text', 
+             color = 'black', 
+             aes(label = after_stat(count)),
+           position = position_stack(vjust = 1)) +
+  facet_wrap(~factor(organism,
+                     levels = c("cer", "par", "hyb"),
+                     labels = c("Scer", "Spar", "Hyb"))) + 
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  xlab("response")
+```
+What percent of genes are conserved unresponsive in all 3 groups?
+```{r}
+genedf <- responsedf |> 
+  pivot_wider(id_cols = "gene_name", 
+              names_from = "organism", 
+              values_from = "response") |> 
+  mutate(is_conserved_unresponsive = (cer == "none") &
+           (par == "none") & (hyb == "none"))
+sum(genedf$is_conserved_unresponsive)/nrow(genedf)
+```
+
+Which (responsive) genes are the same response in Scer and Spar?
+```{r}
+genedf |> filter(!is_conserved_unresponsive) |> 
+  select(cer, par) |> table()
+```
+```{r}
+genedf |> filter(!is_conserved_unresponsive) |> 
+  select(cer, hyb) |> table()
+```
+```{r}
+genedf |> filter(!is_conserved_unresponsive) |> 
+  select(par, hyb) |> table()
+```
+Numbers for 3-ring venn diagram of conserved vs diverged responsive genes
+```{r}
+plotdf <- responsedf |> filter(response != "none")
+ggVennDiagram(list(Scer = plotdf$gene_name[plotdf$organism == "cer"], 
+                   Spar = plotdf$gene_name[plotdf$organism == "par"],
+                   Hyb = plotdf$gene_name[plotdf$organism == "hyb"])) + 
+                scale_fill_gradient(low="grey90",high = "red")
+```
+
+## Ortholog correlations
+
+Correlation is calculated between the three timepoints, average expression between replicates (because pairing replicates only works for hybrid alleles that we know are from the same cell)
+```{r collapsed}
+collapsed <- expand_grid(gene_name = rownames(counts),
+                         time_point_num = unique(sample_info$time_point_num),
+                         organism = unique(sample_info$organism),
+                         allele = unique(sample_info$allele))
+collapsed$mean_expr <- map(c(1:nrow(collapsed)), \(i) {
+  g <- collapsed$gene_name[i]
+  org <- collapsed$organism[i]
+  al <- collapsed$allele[i]
+  tp <- collapsed$time_point_num[i]
+  expr_vec <- counts[g, sample_info$genotype == "WT" &
+                       sample_info$organism == org &
+                       sample_info$allele == al &
+                       sample_info$time_point_num == tp]
+  return(mean(expr_vec))
+}) |> unlist()
+collapsed <- drop_na(collapsed) # NAs are combinations of org/allele that don't exist (i.e. spar allele in scer org)
+```
+
+Giving each gene its correlation, either between parents (cor(Scer, Spar)), hybrid alleles (cor(Hyc, Hyp)),
+Scer-hyb ((cor(Scer, Hyb))), or Spar-hyb (cor(Spar, Hyb)).
+```{r getOrthoCor}
+getOrthoCor <- function(.g, .org1, .al1, .org2, .al2) {
+  expr1 <- collapsed |> filter(gene_name == .g &
+                                 organism == .org1 &
+                                 allele == .al1) |> 
+    rename("mean_expr1"="mean_expr") |> 
+    select(gene_name, time_point_num, mean_expr1)
+  expr2 <- collapsed |> filter(gene_name == .g &
+                                 organism == .org2 &
+                                 allele == .al2) |> 
+    rename("mean_expr2"="mean_expr") |> 
+    select(gene_name, time_point_num, mean_expr2)
+  outdf <- inner_join(expr1, expr2,
+                      by = c("gene_name", "time_point_num"))
+  return(cor(outdf$mean_expr1, outdf$mean_expr2))
+}
+# tests for getOrthoCor
+getOrthoCor(.g = "YGR192C",
+            .org1 = "cer", .al1 = "cer",
+            .org2 = "par", .al2 = "par")
+```
+Plot to see if we visually agree with the test result:
+```{r, cache.extra=plotGenesTFdel, message=FALSE}
+plotGenesTFdel(.gene_idxs = "YGR192C", .tf = "GCR2", .show_tfdel = FALSE,
+               .normalization = "none", .parents_or_hybrid = "parents")
+```
+Calculating ortholog correlations:
+```{r, warning=FALSE}
+# cor(Scer, Spar)
+genedf$cor_parents <- map(genedf$gene_name, 
+                          .f = getOrthoCor, 
+                          .org1 = "cer", .al1 = "cer", 
+                          .org2 = "par", .al2 = "par") |> 
+  unlist()
+# cor(Hyc, Hyp)
+genedf$cor_hybrid <- map(genedf$gene_name, 
+                         .f = getOrthoCor, 
+                         .org1 = "hyb", .al1 = "cer", 
+                         .org2 = "hyb", .al2 = "par") |> 
+  unlist()
+# cor(Scer, Hyb)
+genedf$cor_cer <- map(genedf$gene_name, 
+                      .f = getOrthoCor, 
+                      .org1 = "cer", .al1 = "cer", 
+                      .org2 = "hyb", .al2 = "hyb") |> 
+  unlist()
+# cor(Spar, Hyb)
+genedf$cor_par <- map(genedf$gene_name, 
+                      .f = getOrthoCor, 
+                      .org1 = "par", .al1 = "par", 
+                      .org2 = "hyb", .al2 = "hyb") |> 
+  unlist()
+```
+
+Genes with low correlation in the parents tend to have high correlation in the hybrid
+```{r}
+cor_thresh <- 0.5
+# parents
+plotdf <- genedf |> drop_na() |> 
+  filter(!is_conserved_unresponsive)
+ggplot(plotdf, aes(x = cor_parents)) +
+  geom_density() +
+  geom_vline(xintercept = cor_thresh) +
+  xlab("parental correlation between\n orthologs (cor(Scer, Spar))") +
+  theme_classic()
+
+plotdf <- genedf |> drop_na() |> 
+  filter(cor_parents < cor_thresh &
+           !is_conserved_unresponsive) |> 
+  pivot_longer(cols = c("cor_hybrid",
+                        "cor_parents"),
+               names_to = "parent_or_hybrid",
+               values_to = "cor")
+ggplot(plotdf, aes(x = cor)) +
+  geom_density(aes(fill = factor(parent_or_hybrid,
+                                 levels = c("cor_parents",
+                                            "cor_hybrid"),
+                                 labels = c("parent", 
+                                            "hybrid"))),
+               alpha = 0.5) +
+  xlab("correlation for genes \nwith low parental correlation") +
+  theme_classic() +
+  theme(legend.title = element_blank())
+```
+Furthermore these genes tend to correlate with one or the other parent's expression:
+```{r}
+sgd_lookup <- read_delim("data_files/downloaded_genomes_and_features/SGD_features.tab", delim = "\t", col_names = FALSE) |> filter(X2 == "ORF") |> 
+  select(X4, X5) |> 
+  rename("gene_name"="X4",
+         "common_name"="X5")
+plotdf <- genedf |> drop_na() |> 
+  filter(cor_parents < cor_thresh &
+           !is_conserved_unresponsive) |> 
+  mutate(conserved_btwn_species = cer == par) |> 
+  left_join(y = sgd_lookup, by = "gene_name")
+ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
+  geom_point() +
+  geom_vline(xintercept = 0.8, color = "red") +
+  geom_hline(yintercept = 0.8, color = "red") +
+  geom_text(data = filter(plotdf, cor_cer < 0.7 &
+                            cor_par < 0.7),
+            aes(label = common_name, x = cor_cer,
+                y = cor_par),
+            nudge_y = -0.1) +
+  theme_classic() +
+  xlab("correlation (Scer, Hyb)") +
+  ylab("correlation (Spar, Hyb)")
+```
+
 
 
 ```{r}
@@ -64,7 +360,3 @@ TFdf <- TFdeldf |> select(gene_name, deletion, timepoint, organism, lfc, padj) |
 # # mostly consistent btwn experiments with some exceptions mainly in heat/cold
 # # HAP4, RPN4 most dramatic difference in effect direction---Scer up in Heat, Spar up in all others
 ```
-
-## Hybrid Network
-
-
