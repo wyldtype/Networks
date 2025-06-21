@@ -254,6 +254,9 @@ $(document).ready(function () {
 <li>
   <a href="DESeq2.html">DESeq2</a>
 </li>
+<li>
+  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+</li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         
@@ -276,10 +279,10 @@ $(document).ready(function () {
 <p>Here’s where we load the 3’ tagseq samples, normalize them, and
 assemble them into a single count matrix.</p>
 <p>Working with RNAseq data published in Krieger et al. 2020</p>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr    openxlsx 
-##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
-## matrixStats 
-##        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2 
+##        TRUE        TRUE        TRUE        TRUE        TRUE 
+##      ggpubr    openxlsx matrixStats 
+##        TRUE        TRUE        TRUE</code></pre>
 <div id="reading-in-tagseq-data-and-separating-allele-specific-counts"
 class="section level2">
 <h2>Reading in tagseq data and separating allele-specific counts</h2>
@@ -467,9 +470,10 @@ counts &lt;- apply(sample_info, 1, \(x) {
   if (org == &quot;Saccharomyces cerevisiae x Saccharomyces paradoxus&quot;) {
     cer_countcol &lt;- tagseq_cer[,sample_name]
     par_countcol &lt;- tagseq_par[,sample_name]
-    output &lt;- cbind(cer_countcol, par_countcol)
+    hyb_countcol &lt;- tagseq_cer[,sample_name] + tagseq_par[,sample_name]
+    output &lt;- cbind(cer_countcol, par_countcol, hyb_countcol)
     colnames(output) &lt;- c(gsub(&quot;_hyb_&quot;, &quot;_hyc_&quot;, sample_name),
-                          gsub(&quot;_hyb_&quot;, &quot;_hyp_&quot;, sample_name))
+                          gsub(&quot;_hyb_&quot;, &quot;_hyp_&quot;, sample_name), sample_name)
     return(output)
   }
 }) |&gt; Reduce(f = cbind)
@@ -482,7 +486,7 @@ cat(&quot;All gene names are the same in combined count matrix and Scer count ma
     \n&quot;)</code></pre>
 <pre><code>## All gene names are the same in combined count matrix and Spar count matrix: TRUE 
 ## </code></pre>
-<pre class="r"><code># adding second row for each hybrid allele in info df
+<pre class="r"><code># adding two more rows for each hybrid allele in info df
 sample_info &lt;- map(c(1:nrow(sample_info)), \(i) {
   x &lt;- sample_info[i,]
   org &lt;- sample_info[i,&quot;organism&quot;]
@@ -491,7 +495,7 @@ sample_info &lt;- map(c(1:nrow(sample_info)), \(i) {
     x_par &lt;- x
     x_cer[&quot;sample_name&quot;] &lt;- gsub(&quot;_hyb_&quot;, &quot;_hyc_&quot;, x_cer[&quot;sample_name&quot;])
     x_par[&quot;sample_name&quot;] &lt;- gsub(&quot;_hyb_&quot;, &quot;_hyp_&quot;, x_par[&quot;sample_name&quot;])
-    output &lt;- bind_rows(x_cer, x_par)
+    output &lt;- bind_rows(x_cer, x_par, x)
     return(output)
   }
   if (org != &quot;Saccharomyces cerevisiae x Saccharomyces paradoxus&quot;) {
@@ -512,7 +516,7 @@ sample_info$organism &lt;- map_chr(sample_info$sample_name, function(s) {
   if (grepl(&quot;_par_&quot;, s)) {
     return(&quot;par&quot;)
   }
-  if (grepl(&quot;_hy[pc]_&quot;, s)) {
+  if (grepl(&quot;_hy[bpc]_&quot;, s)) {
     return(&quot;hyb&quot;)
   }
 })
@@ -524,6 +528,9 @@ sample_info$allele &lt;- map_chr(sample_info$sample_name, function(s) {
   }
   if (grepl(&quot;_par_&quot;, s) | grepl(&quot;_hyp_&quot;, s)) {
     return(&quot;par&quot;)
+  }
+  if (grepl(&quot;_hyb_&quot;, s)) {
+    return(&quot;hyb&quot;)
   }
 })
 
@@ -581,16 +588,16 @@ well_flask_ID:</p>
 <pre><code>## 
 ##     0     1     2     3 
 ## 51060   349   155    51</code></pre>
-<p>And Hybrids currently have mainly 2-4:</p>
+<p>And Hybrids currently have mainly 3-6:</p>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
   select(well_flask_ID, genotype) |&gt; 
   table() |&gt; table()</code></pre>
 <pre><code>## 
-##     0     2     4     6 
+##     0     3     6     9 
 ## 11352   142   107     9</code></pre>
 <p>By the end of this section, every parental sample should still have
-at most 3 entries and most should have 3 (6 for hybrids, one for each of
-the two alleles).</p>
+at most 3 entries and most should have 3 (9 for hybrids, one for each of
+the two alleles plus summed alleles).</p>
 <p>First of all (based on personal communication), the GS2018 samples
 (which are the majority of the WT samples) have a different
 well_flask_ID for the 1 hr sample than for 0 or 16 hr. For each row in
@@ -618,47 +625,57 @@ standardizeGS2018ID(&quot;G8_G12_GS2018&quot;)</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table() </code></pre>
 <pre><code>## well_flask_ID
-##  A1_G6_GS2018  A2_G6_GS2018  A7_G6_GS2018  A8_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018 
-##             2             2             1             1             2             2 
-##  B7_G6_GS2018  B8_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018  C7_G6_GS2018  C8_G6_GS2018 
-##             1             1             2             2             1             1 
-##  D1_G6_GS2018  D2_G6_GS2018  D7_G6_GS2018  D8_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 
-##             2             2             1             1             2             2 
-## E7_G12_GS2018 E8_G12_GS2018 F1_G12_GS2018 F2_G12_GS2018 F7_G12_GS2018 F8_G12_GS2018 
-##             1             1             2             2             1             1 
-## G1_G12_GS2018 G2_G12_GS2018 G7_G12_GS2018 G8_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
-##             2             2             1             1             1             2 
-## H7_G12_GS2018 H8_G12_GS2018 
-##             1             1</code></pre>
-<pre class="r"><code>cat(&quot;Hybrid samples (all 2s and 4s):\n&quot;)</code></pre>
-<pre><code>## Hybrid samples (all 2s and 4s):</code></pre>
+##  A1_G6_GS2018  A2_G6_GS2018  A7_G6_GS2018  A8_G6_GS2018 
+##             2             2             1             1 
+##  B1_G6_GS2018  B2_G6_GS2018  B7_G6_GS2018  B8_G6_GS2018 
+##             2             2             1             1 
+##  C1_G6_GS2018  C2_G6_GS2018  C7_G6_GS2018  C8_G6_GS2018 
+##             2             2             1             1 
+##  D1_G6_GS2018  D2_G6_GS2018  D7_G6_GS2018  D8_G6_GS2018 
+##             2             2             1             1 
+## E1_G12_GS2018 E2_G12_GS2018 E7_G12_GS2018 E8_G12_GS2018 
+##             2             2             1             1 
+## F1_G12_GS2018 F2_G12_GS2018 F7_G12_GS2018 F8_G12_GS2018 
+##             2             2             1             1 
+## G1_G12_GS2018 G2_G12_GS2018 G7_G12_GS2018 G8_G12_GS2018 
+##             2             2             1             1 
+## H1_G12_GS2018 H2_G12_GS2018 H7_G12_GS2018 H8_G12_GS2018 
+##             1             2             1             1</code></pre>
+<pre class="r"><code>cat(&quot;Hybrid samples (all 3s and 6s):\n&quot;)</code></pre>
+<pre><code>## Hybrid samples (all 3s and 6s):</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table()</code></pre>
 <pre><code>## well_flask_ID
-## A10_G12_GS2018 A11_G12_GS2018 A12_G12_GS2018  A3_G12_GS2018  A4_G12_GS2018 
-##              2              2              2              4              4 
-##  A5_G12_GS2018  A6_G12_GS2018  A9_G12_GS2018 B10_G12_GS2018 B11_G12_GS2018 
-##              4              4              2              2              2 
-## B12_G12_GS2018  B3_G12_GS2018  B4_G12_GS2018  B5_G12_GS2018  B6_G12_GS2018 
-##              2              4              4              4              4 
-##  B9_G12_GS2018 C10_G12_GS2018 C11_G12_GS2018 C12_G12_GS2018  C3_G12_GS2018 
-##              2              2              2              2              4 
-##  C4_G12_GS2018  C5_G12_GS2018  C6_G12_GS2018  C9_G12_GS2018 D10_G12_GS2018 
-##              4              4              4              2              2 
-## D11_G12_GS2018 D12_G12_GS2018  D3_G12_GS2018  D4_G12_GS2018  D5_G12_GS2018 
-##              2              2              4              4              4 
-##  D6_G12_GS2018  D9_G12_GS2018 E10_WT2_GS2018 E11_WT2_GS2018 E12_WT2_GS2018 
-##              4              2              2              2              2 
-##  E3_WT2_GS2018  E4_WT2_GS2018  E5_WT2_GS2018  E6_WT2_GS2018  E9_WT2_GS2018 
-##              4              4              4              4              2 
-## F10_WT2_GS2018 F11_WT2_GS2018 F12_WT2_GS2018  F3_WT2_GS2018  F4_WT2_GS2018 
-##              2              2              2              4              4 
-##  F5_WT2_GS2018  F6_WT2_GS2018  F9_WT2_GS2018 G10_WT2_GS2018 G11_WT2_GS2018 
-##              4              4              2              2              2 
-## G12_WT2_GS2018  G3_WT2_GS2018  G4_WT2_GS2018  G5_WT2_GS2018  G6_WT2_GS2018 
-##              2              4              4              4              4 
-##  G9_WT2_GS2018 H10_WT2_GS2018  H3_WT2_GS2018  H4_WT2_GS2018  H9_WT2_GS2018 
-##              2              2              4              4              2</code></pre>
+## A10_G12_GS2018 A11_G12_GS2018 A12_G12_GS2018  A3_G12_GS2018 
+##              3              3              3              6 
+##  A4_G12_GS2018  A5_G12_GS2018  A6_G12_GS2018  A9_G12_GS2018 
+##              6              6              6              3 
+## B10_G12_GS2018 B11_G12_GS2018 B12_G12_GS2018  B3_G12_GS2018 
+##              3              3              3              6 
+##  B4_G12_GS2018  B5_G12_GS2018  B6_G12_GS2018  B9_G12_GS2018 
+##              6              6              6              3 
+## C10_G12_GS2018 C11_G12_GS2018 C12_G12_GS2018  C3_G12_GS2018 
+##              3              3              3              6 
+##  C4_G12_GS2018  C5_G12_GS2018  C6_G12_GS2018  C9_G12_GS2018 
+##              6              6              6              3 
+## D10_G12_GS2018 D11_G12_GS2018 D12_G12_GS2018  D3_G12_GS2018 
+##              3              3              3              6 
+##  D4_G12_GS2018  D5_G12_GS2018  D6_G12_GS2018  D9_G12_GS2018 
+##              6              6              6              3 
+## E10_WT2_GS2018 E11_WT2_GS2018 E12_WT2_GS2018  E3_WT2_GS2018 
+##              3              3              3              6 
+##  E4_WT2_GS2018  E5_WT2_GS2018  E6_WT2_GS2018  E9_WT2_GS2018 
+##              6              6              6              3 
+## F10_WT2_GS2018 F11_WT2_GS2018 F12_WT2_GS2018  F3_WT2_GS2018 
+##              3              3              3              6 
+##  F4_WT2_GS2018  F5_WT2_GS2018  F6_WT2_GS2018  F9_WT2_GS2018 
+##              6              6              6              3 
+## G10_WT2_GS2018 G11_WT2_GS2018 G12_WT2_GS2018  G3_WT2_GS2018 
+##              3              3              3              6 
+##  G4_WT2_GS2018  G5_WT2_GS2018  G6_WT2_GS2018  G9_WT2_GS2018 
+##              6              6              6              3 
+## H10_WT2_GS2018  H3_WT2_GS2018  H4_WT2_GS2018  H9_WT2_GS2018 
+##              3              6              6              3</code></pre>
 <p>Applying to GS2018 samples:</p>
 <pre class="r"><code>GS2018_idxs &lt;- grepl(&quot;GS2018&quot;, sample_info$well_flask_ID)
 sample_info$well_flask_ID[GS2018_idxs] &lt;- sapply(sample_info$well_flask_ID[GS2018_idxs], standardizeGS2018ID)</code></pre>
@@ -668,28 +685,36 @@ sample_info$well_flask_ID[GS2018_idxs] &lt;- sapply(sample_info$well_flask_ID[GS
 <pre class="r"><code>sample_info |&gt; filter(organism %in% c(&quot;cer&quot;, &quot;par&quot;) &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table() </code></pre>
 <pre><code>## well_flask_ID
-##  A1_G6_GS2018  A2_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018  C1_G6_GS2018  C2_G6_GS2018 
-##             3             3             3             3             3             3 
-##  D1_G6_GS2018  D2_G6_GS2018 E1_G12_GS2018 E2_G12_GS2018 F1_G12_GS2018 F2_G12_GS2018 
-##             3             3             3             3             3             3 
+##  A1_G6_GS2018  A2_G6_GS2018  B1_G6_GS2018  B2_G6_GS2018 
+##             3             3             3             3 
+##  C1_G6_GS2018  C2_G6_GS2018  D1_G6_GS2018  D2_G6_GS2018 
+##             3             3             3             3 
+## E1_G12_GS2018 E2_G12_GS2018 F1_G12_GS2018 F2_G12_GS2018 
+##             3             3             3             3 
 ## G1_G12_GS2018 G2_G12_GS2018 H1_G12_GS2018 H2_G12_GS2018 
 ##             3             3             2             3</code></pre>
-<pre class="r"><code>cat(&quot;Hybrid samples (should have 6):\n&quot;)</code></pre>
-<pre><code>## Hybrid samples (should have 6):</code></pre>
+<pre class="r"><code>cat(&quot;Hybrid samples (should have 9):\n&quot;)</code></pre>
+<pre><code>## Hybrid samples (should have 9):</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table()</code></pre>
 <pre><code>## well_flask_ID
-## A3_G12_GS2018 A4_G12_GS2018 A5_G12_GS2018 A6_G12_GS2018 B3_G12_GS2018 B4_G12_GS2018 
-##             6             6             6             6             6             6 
-## B5_G12_GS2018 B6_G12_GS2018 C3_G12_GS2018 C4_G12_GS2018 C5_G12_GS2018 C6_G12_GS2018 
-##             6             6             6             6             6             6 
-## D3_G12_GS2018 D4_G12_GS2018 D5_G12_GS2018 D6_G12_GS2018 E3_WT2_GS2018 E4_WT2_GS2018 
-##             6             6             6             6             6             6 
-## E5_WT2_GS2018 E6_WT2_GS2018 F3_WT2_GS2018 F4_WT2_GS2018 F5_WT2_GS2018 F6_WT2_GS2018 
-##             6             6             6             6             6             6 
-## G3_WT2_GS2018 G4_WT2_GS2018 G5_WT2_GS2018 G6_WT2_GS2018 H3_WT2_GS2018 H4_WT2_GS2018 
-##             6             6             6             6             6             6</code></pre>
-<pre class="r"><code># hybrids should have 6, 2 alleles x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint</code></pre>
+## A3_G12_GS2018 A4_G12_GS2018 A5_G12_GS2018 A6_G12_GS2018 
+##             9             9             9             9 
+## B3_G12_GS2018 B4_G12_GS2018 B5_G12_GS2018 B6_G12_GS2018 
+##             9             9             9             9 
+## C3_G12_GS2018 C4_G12_GS2018 C5_G12_GS2018 C6_G12_GS2018 
+##             9             9             9             9 
+## D3_G12_GS2018 D4_G12_GS2018 D5_G12_GS2018 D6_G12_GS2018 
+##             9             9             9             9 
+## E3_WT2_GS2018 E4_WT2_GS2018 E5_WT2_GS2018 E6_WT2_GS2018 
+##             9             9             9             9 
+## F3_WT2_GS2018 F4_WT2_GS2018 F5_WT2_GS2018 F6_WT2_GS2018 
+##             9             9             9             9 
+## G3_WT2_GS2018 G4_WT2_GS2018 G5_WT2_GS2018 G6_WT2_GS2018 
+##             9             9             9             9 
+## H3_WT2_GS2018 H4_WT2_GS2018 
+##             9             9</code></pre>
+<pre class="r"><code># hybrids should have 9, (hyc, hyp, and hyb) x 3 timepoints, Parents have just 3 timepoints. Except for H1, which is missing a timepoint</code></pre>
 <p>Now we can get rid of the “GS” part of the rep name, which can be
 different for the same sample at different timepoints and replacing it
 with the tag immediately before the well_flask_ID in the sample name for
@@ -722,12 +747,23 @@ sample_info |&gt;
   summarise(n_per_org_gen_tp = n()) |&gt; 
   filter((organism != &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 1) |
            (organism == &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 2)) # should be empty</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;new_id&#39;, &#39;organism&#39;, &#39;genotype&#39;. You can
-## override using the `.groups` argument.</code></pre>
-<pre><code>## # A tibble: 0 × 5
-## # Groups:   new_id, organism, genotype [0]
-## # ℹ 5 variables: new_id &lt;chr&gt;, organism &lt;chr&gt;, genotype &lt;chr&gt;, time_point_str &lt;chr&gt;,
-## #   n_per_org_gen_tp &lt;int&gt;</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;new_id&#39;, &#39;organism&#39;,
+## &#39;genotype&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## # A tibble: 383 × 5
+## # Groups:   new_id, organism, genotype [161]
+##    new_id    organism genotype time_point_str n_per_org_gen_tp
+##    &lt;chr&gt;     &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;                     &lt;int&gt;
+##  1 G12_A3_G… hyb      WT       1 h, low N                    3
+##  2 G12_A4_G… hyb      WT       1 h, low N                    3
+##  3 G12_A5_G… hyb      WT       1 h, low N                    3
+##  4 G12_A6_G… hyb      WT       1 h, low N                    3
+##  5 G12_B3_G… hyb      WT       1 h, low N                    3
+##  6 G12_B4_G… hyb      WT       1 h, low N                    3
+##  7 G12_B5_G… hyb      WT       1 h, low N                    3
+##  8 G12_B6_G… hyb      WT       1 h, low N                    3
+##  9 G12_C3_G… hyb      WT       1 h, low N                    3
+## 10 G12_C4_G… hyb      WT       1 h, low N                    3
+## # ℹ 373 more rows</code></pre>
 <pre class="r"><code># updating well_flask_ID 
 sample_info$well_flask_ID &lt;- sample_info$new_id
 sample_info &lt;- select(sample_info, -&quot;new_id&quot;)
@@ -755,14 +791,14 @@ times for each organism/condition:</p>
 <pre><code>## 
 ##     0     1     2     3 
 ## 25103     9    28   249</code></pre>
-<p>And for hybrid samples: a) most well flask IDs are represented 6
-times, and b) no well flask ID is represented more than 6 times for each
+<p>And for hybrid samples: a) most well flask IDs are represented 9
+times, and b) no well flask ID is represented more than 9 times for each
 organism/condition:</p>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
   select(well_flask_ID, genotype) |&gt; 
   table() |&gt; table()</code></pre>
 <pre><code>## 
-##    0    2    4    6 
+##    0    3    6    9 
 ## 7084   31   38   92</code></pre>
 </div>
 <div id="removing-samples-with-small-library-sizes"
@@ -771,29 +807,50 @@ class="section level2">
 <pre class="r"><code># Exploring library sizes (un-normalized)
 libsizes &lt;- colSums(counts) # these counts include all samples, hybrid and parental
 ggplot(tibble(libsize = libsizes), aes(x = libsize)) + geom_histogram()</code></pre>
-<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</code></pre>
+<pre><code>## `stat_bin()` using `bins = 30`. Pick better value with
+## `binwidth`.</code></pre>
 <p><img src="data_cleaning_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
 <pre class="r"><code>sort(libsizes)[c(1:20)]</code></pre>
-<pre><code>##  GLN3_TP3_hyc_remnants_B3_C5_GS11  GLN3_TP3_hyp_remnants_B3_C5_GS11 
-##                            105424                            105759 
-##         TEC1_TP2_hyp_H2_A2_D2_GS4      STB5_TP3_par_P4C2_G2_B3_GS10 
-##                            106406                            106623 
-##         TEC1_TP2_hyc_H2_A2_D2_GS4 ARG81_TP2_par_remnants2_H2_F9_GS8 
-##                            106797                            108755 
-##         RFX1_TP2_hyc_H2_C5_G8_GS4         HAP4_TP2_hyc_H2_C3_B6_GS4 
-##                            111314                            111562 
-##         RFX1_TP2_hyp_H2_C5_G8_GS4        GZF3_TP2_hyc_H2_A6_D11_GS4 
-##                            112245                            112341 
-##         HAP4_TP2_hyp_H2_C3_B6_GS4        GZF3_TP2_hyp_H2_A6_D11_GS4 
-##                            112959                            113398 
-## ACE2_TP3_par_remnants2_G1_A1_GS13         HAP5_TP2_cer_C3_E2_C6_GS8 
-##                            114732                            116276 
-##          WT_TP2_par_P5_E2_G6_GS13      AFT1_TP2_hyc_P3H1_C6_H10_GS6 
-##                            117042                            118855 
-##      ARG80_TP2_hyc_P3H1_H2_E3_GS6         RFX1_TP2_cer_C3_F4_G8_GS8 
-##                            120618                            122925 
-##      AFT1_TP2_hyp_P3H1_C6_H10_GS6         MBP1_TP2_cer_C1_B4_C7_GS1 
-##                            124823                            125027</code></pre>
+<pre><code>##  GLN3_TP3_hyc_remnants_B3_C5_GS11 
+##                            105424 
+##  GLN3_TP3_hyp_remnants_B3_C5_GS11 
+##                            105759 
+##         TEC1_TP2_hyp_H2_A2_D2_GS4 
+##                            106406 
+##      STB5_TP3_par_P4C2_G2_B3_GS10 
+##                            106623 
+##         TEC1_TP2_hyc_H2_A2_D2_GS4 
+##                            106797 
+## ARG81_TP2_par_remnants2_H2_F9_GS8 
+##                            108755 
+##         RFX1_TP2_hyc_H2_C5_G8_GS4 
+##                            111314 
+##         HAP4_TP2_hyc_H2_C3_B6_GS4 
+##                            111562 
+##         RFX1_TP2_hyp_H2_C5_G8_GS4 
+##                            112245 
+##        GZF3_TP2_hyc_H2_A6_D11_GS4 
+##                            112341 
+##         HAP4_TP2_hyp_H2_C3_B6_GS4 
+##                            112959 
+##        GZF3_TP2_hyp_H2_A6_D11_GS4 
+##                            113398 
+## ACE2_TP3_par_remnants2_G1_A1_GS13 
+##                            114732 
+##         HAP5_TP2_cer_C3_E2_C6_GS8 
+##                            116276 
+##          WT_TP2_par_P5_E2_G6_GS13 
+##                            117042 
+##      AFT1_TP2_hyc_P3H1_C6_H10_GS6 
+##                            118855 
+##      ARG80_TP2_hyc_P3H1_H2_E3_GS6 
+##                            120618 
+##         RFX1_TP2_cer_C3_F4_G8_GS8 
+##                            122925 
+##      AFT1_TP2_hyp_P3H1_C6_H10_GS6 
+##                            124823 
+##         MBP1_TP2_cer_C1_B4_C7_GS1 
+##                            125027</code></pre>
 <p>No libraries under 100k reads, no need to remove small libraries
 prior to normalizing.</p>
 <p>Are the hybrid library sizes correlated between hyc and hyp

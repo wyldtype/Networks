@@ -254,6 +254,9 @@ $(document).ready(function () {
 <li>
   <a href="DESeq2.html">DESeq2</a>
 </li>
+<li>
+  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+</li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         
@@ -273,11 +276,13 @@ $(document).ready(function () {
 
 <p>For testing functions:</p>
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr matrixStats 
-##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2 
+##        TRUE        TRUE        TRUE        TRUE        TRUE 
+##      ggpubr matrixStats 
+##        TRUE        TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)</code></pre>
 <p>Plotting functions:</p>
-<pre class="r"><code># plots WT vs TFdel in both species
+<pre class="r"><code># plots WT vs TFdel in both species (option to exclude WT or TFdel)
 plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
                                        .info1, .info2, .info3, .info4,
                                        .name1 = &quot;S. cerevisiae WT&quot;,
@@ -376,6 +381,9 @@ plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
     }
     if (.show_points_wt | .show_points_tfdel) {
       .plotlims &lt;- c(min_expr - 0.1, max_expr + 0.1) # buffer b/c TFdel points are very large
+      if (.normalization == &quot;none&quot; &amp; min_expr == 0) { # for some reason, points right at 0 get cut off, probably the jitter is too significant without normalization
+        .plotlims &lt;- c(min_expr - 5, max_expr + 0.1)
+      }
     }
   }
   plotdf &lt;- gdf
@@ -398,9 +406,9 @@ plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
   if (.show_lines_wt &amp; .show_wt) {
     # lines trace average expr at each timepoint/experiment for each group
     avgexpr1 &lt;- plotdf %&gt;% filter(group_id == 1) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
-                                                                                          sd_expr = sd(expr, na.rm = TRUE))
+                                                                                                    sd_expr = sd(expr, na.rm = TRUE))
     avgexpr2 &lt;- plotdf %&gt;% filter(group_id == 2) |&gt; group_by(time_point_str, group_id) |&gt; summarise(mean_expr = mean(expr, na.rm = TRUE),
-                                                                                          sd_expr = sd(expr, na.rm = TRUE))
+                                                                                                    sd_expr = sd(expr, na.rm = TRUE))
     # adding line segments (the =!! is from rlang and forces the mapping to not be lazily evaluated at the time of plotting):
     p &lt;- p +
       geom_line(data = avgexpr1, aes(x = time_point_str, y = mean_expr, group = group_id), color = .color1, linewidth = 1, linetype = &quot;solid&quot;) +
@@ -457,19 +465,20 @@ plotExpressionProfileTFdel(.cts1 = counts[&quot;YPL015C&quot;, sample_info$organ
                            .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,],
                            .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,], 
                            .normalization = &quot;none&quot;)</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;.
-## You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override
-## using the `.groups` argument.
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;,
+## &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override using the
 ## `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the
-## `.groups` argument.</code></pre>
-<pre><code>## Warning: Removed 3 rows containing missing values or values outside the scale range
-## (`geom_point()`).</code></pre>
-<p><img src="about_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+## `summarise()` has grouped output by &#39;time_point_str&#39;,
+## &#39;genotype&#39;. You can override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`,
+## `genotype`
+## Adding missing grouping variables: `time_point_str`,
+## `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can
+## override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can
+## override using the `.groups` argument.</code></pre>
+<p><img src="about_files/figure-html/plotExpressionProfileTFdel-1.png" width="672" /></p>
 <pre class="r"><code># Plots each genotype as a separate line
 plotExpressionProfileTFdels &lt;- function(.cts,
                                         .info,
@@ -530,11 +539,12 @@ plotExpressionProfileTFdels &lt;- function(.cts,
 #                                       cer == 2 &amp;
 #                                       par == 2) |&gt;
 #   select(gene_name) |&gt; pull()
-# test_counts &lt;- counts_tfdel[test_gene_idxs, sample_info_tfdel$organism == &quot;cer&quot;]
-# test_info &lt;- sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot;,]
+# test_counts &lt;- counts[test_gene_idxs, sample_info$organism == &quot;cer&quot;]
+# test_info &lt;- sample_info[sample_info$organism == &quot;cer&quot;,]
 # plotExpressionProfileTFdels(.cts = test_counts, .info = test_info,
 #                             .normalization = &quot;none&quot;)
 
+# This function is in need of description, but my guess is that it treats every gene as its own line rather than plotting the mean of all genes in the group
 plotSingleProfilesTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
                                     .info1, .info2, .info3, .info4,
                                     .name1 = &quot;S. cerevisiae WT&quot;,
@@ -656,121 +666,141 @@ plotSingleProfilesTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
                size = 0.25,
                aes(x = time_point_str, y = expr,
                    color = group_id)) +
-  facet_wrap(~gene_name)
+    facet_wrap(~gene_name)
   return(p)
 }
 
-# Wrapper function for plotExpressionProfileTFdel
+# Wrapper function for plotExpressionProfileTFdel and plotSingleProfilesTFdel
 plotGenesTFdel &lt;- function(.gene_idxs, .tf, .parents_or_hybrid = &quot;parents&quot;,
                            .plotlims = NULL, .single_genes = FALSE,
-                           .normalization = &quot;log2&quot;) {
+                           .normalization = &quot;log2&quot;, .show_wt = TRUE, .show_tfdel = TRUE) {
   if (.parents_or_hybrid == &quot;parents&quot; &amp; !.single_genes) {
-    p &lt;- plotExpressionProfileTFdel(.cts1 = counts_tfdel[.gene_idxs,
-                                                    sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                      sample_info_tfdel$genotype == &quot;WT&quot;,
-                                                    drop = FALSE],
-                               .cts2 = counts_tfdel[.gene_idxs,
-                                                    sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                      sample_info_tfdel$genotype == &quot;WT&quot;,
-                                                    drop = FALSE],
-                               .cts3 = counts_tfdel[.gene_idxs,
-                                                    sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                      sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
-                                                    drop = FALSE],
-                               .cts4 = counts_tfdel[.gene_idxs,
-                                                    sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                      sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
-                                                    drop = FALSE],
-                               .info1 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                            sample_info_tfdel$genotype == &quot;WT&quot;,],
-                               .info2 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                            sample_info_tfdel$genotype == &quot;WT&quot;,],
-                               .info3 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                            sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
-                               .info4 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                            sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
-                               .normalization = .normalization, .plotlims = .plotlims)
+    p &lt;- plotExpressionProfileTFdel(.cts1 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;cer&quot; &amp;
+                                                     sample_info$genotype == &quot;WT&quot;,
+                                                   drop = FALSE],
+                                    .cts2 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;par&quot; &amp;
+                                                     sample_info$genotype == &quot;WT&quot;,
+                                                   drop = FALSE],
+                                    .cts3 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;cer&quot; &amp;
+                                                     sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                   drop = FALSE],
+                                    .cts4 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;par&quot; &amp;
+                                                     sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                   drop = FALSE],
+                                    .info1 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                           sample_info$genotype == &quot;WT&quot;,],
+                                    .info2 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                           sample_info$genotype == &quot;WT&quot;,],
+                                    .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                           sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                    .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                           sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                    .normalization = .normalization, .plotlims = .plotlims,
+                                    .show_wt = .show_wt, .show_tfdel = .show_tfdel)
   }
   if (.parents_or_hybrid == &quot;hybrid&quot; &amp; !.single_genes) {
-    p &lt;- plotExpressionProfileTFdel(.cts1 = counts_tfdel_allele[.gene_idxs,
-                                                           sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                             sample_info_tfdel_allele$genotype == &quot;WT&quot;,
-                                                           drop = FALSE],
-                               .cts2 = counts_tfdel_allele[.gene_idxs,
-                                                           sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                             sample_info_tfdel_allele$genotype == &quot;WT&quot;,
-                                                           drop = FALSE],
-                               .cts3 = counts_tfdel_allele[.gene_idxs,
-                                                           sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                             sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
-                                                           drop = FALSE],
-                               .cts4 = counts_tfdel_allele[.gene_idxs,
-                                                           sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                             sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
-                                                           drop = FALSE],
-                               .info1 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                                   sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
-                               .info2 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                                   sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
-                               .info3 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                                   sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
-                               .info4 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                                   sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
-                               .normalization = .normalization, .plotlims = .plotlims)
+    p &lt;- plotExpressionProfileTFdel(.cts1 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;hyb&quot; &amp;
+                                                     sample_info$allele == &quot;cer&quot; &amp;
+                                                     sample_info$genotype == &quot;WT&quot;,
+                                                   drop = FALSE],
+                                    .cts2 = counts[.gene_idxs, 
+                                                   sample_info$organism == &quot;hyb&quot; &amp;
+                                                     sample_info$allele == &quot;par&quot; &amp;
+                                                     sample_info$genotype == &quot;WT&quot;,
+                                                   drop = FALSE],
+                                    .cts3 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;hyb&quot; &amp;
+                                                     sample_info$allele == &quot;cer&quot; &amp;
+                                                     sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                   drop = FALSE],
+                                    .cts4 = counts[.gene_idxs,
+                                                   sample_info$organism == &quot;hyb&quot; &amp;
+                                                     sample_info$allele == &quot;par&quot; &amp;
+                                                     sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                   drop = FALSE],
+                                    .info1 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                           sample_info$allele == &quot;cer&quot; &amp;
+                                                           sample_info$genotype == &quot;WT&quot;,],
+                                    .info2 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                           sample_info$allele == &quot;par&quot; &amp;
+                                                           sample_info$genotype == &quot;WT&quot;,],
+                                    .info3 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                           sample_info$allele == &quot;cer&quot; &amp;
+                                                           sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                    .info4 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                           sample_info$allele == &quot;par&quot; &amp;
+                                                           sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                    .normalization = .normalization, .plotlims = .plotlims,
+                                    .show_wt = .show_wt, .show_tfdel = .show_tfdel)
   }
   if (.parents_or_hybrid == &quot;parents&quot; &amp; .single_genes) {
-    p &lt;- plotSingleProfilesTFdel(.cts1 = counts_tfdel[.gene_idxs,
-                                                      sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                        sample_info_tfdel$genotype == &quot;WT&quot;,
-                                                      drop = FALSE],
-                                 .cts2 = counts_tfdel[.gene_idxs,
-                                                      sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                        sample_info_tfdel$genotype == &quot;WT&quot;,
-                                                      drop = FALSE],
-                                 .cts3 = counts_tfdel[.gene_idxs,
-                                                      sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                        sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
-                                                      drop = FALSE],
-                                 .cts4 = counts_tfdel[.gene_idxs,
-                                                      sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                        sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),
-                                                      drop = FALSE],
-                                 .info1 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                              sample_info_tfdel$genotype == &quot;WT&quot;,],
-                                 .info2 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                              sample_info_tfdel$genotype == &quot;WT&quot;,],
-                                 .info3 = sample_info_tfdel[sample_info_tfdel$organism == &quot;cer&quot; &amp;
-                                                              sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
-                                 .info4 = sample_info_tfdel[sample_info_tfdel$organism == &quot;par&quot; &amp;
-                                                              sample_info_tfdel$genotype == paste0(.tf, &quot;delete&quot;),],
-                                 .normalization = .normalization, .plotlims = .plotlims)
+    p &lt;- plotSingleProfilesTFdel(.cts1 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;cer&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,
+                                                drop = FALSE],
+                                 .cts2 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;par&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,
+                                                drop = FALSE],
+                                 .cts3 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;cer&quot; &amp;
+                                                  sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                drop = FALSE],
+                                 .cts4 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;par&quot; &amp;
+                                                  sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                drop = FALSE],
+                                 .info1 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                        sample_info$genotype == &quot;WT&quot;,],
+                                 .info2 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                        sample_info$genotype == &quot;WT&quot;,],
+                                 .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                        sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                        sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .normalization = .normalization, .plotlims = .plotlims,
+                                 .show_wt = .show_wt, .show_tfdel = .show_tfdel)
   }
-  if (.parents_or_hybrid == &quot;hybrid&quot; &amp; !.single_genes) {
-    p &lt;- plotSingleProfilesTFdel(.cts1 = counts_tfdel_allele[.gene_idxs,
-                                                             sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                               sample_info_tfdel_allele$genotype == &quot;WT&quot;,
-                                                             drop = FALSE],
-                                 .cts2 = counts_tfdel_allele[.gene_idxs,
-                                                             sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                               sample_info_tfdel_allele$genotype == &quot;WT&quot;,
-                                                             drop = FALSE],
-                                 .cts3 = counts_tfdel_allele[.gene_idxs,
-                                                             sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                               sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
-                                                             drop = FALSE],
-                                 .cts4 = counts_tfdel_allele[.gene_idxs,
-                                                             sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                               sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),
-                                                             drop = FALSE],
-                                 .info1 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                                     sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
-                                 .info2 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                                     sample_info_tfdel_allele$genotype == &quot;WT&quot;,],
-                                 .info3 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;cer&quot; &amp;
-                                                                     sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
-                                 .info4 = sample_info_tfdel_allele[sample_info_tfdel_allele$allele == &quot;par&quot; &amp;
-                                                                     sample_info_tfdel_allele$genotype == paste0(.tf, &quot;delete&quot;),],
-                                 .normalization = .normalization, .plotlims = .plotlims)
+  if (.parents_or_hybrid == &quot;hybrid&quot; &amp; .single_genes) {
+    p &lt;- plotSingleProfilesTFdel(.cts1 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;hyb&quot; &amp;
+                                                       sample_info$allele == &quot;cer&quot; &amp;
+                                                         sample_info$genotype == &quot;WT&quot;,
+                                                       drop = FALSE],
+                                 .cts2 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;hyb&quot; &amp;
+                                                       sample_info$allele == &quot;par&quot; &amp;
+                                                         sample_info$genotype == &quot;WT&quot;,
+                                                       drop = FALSE],
+                                 .cts3 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;hyb&quot; &amp;
+                                                       sample_info$allele == &quot;cer&quot; &amp;
+                                                         sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                       drop = FALSE],
+                                 .cts4 = counts[.gene_idxs,
+                                                sample_info$organism == &quot;hyb&quot; &amp;
+                                                       sample_info$allele == &quot;par&quot; &amp;
+                                                         sample_info$genotype == paste0(.tf, &quot;delete&quot;),
+                                                       drop = FALSE],
+                                 .info1 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                      sample_info$allele == &quot;cer&quot; &amp;
+                                                               sample_info$genotype == &quot;WT&quot;,],
+                                 .info2 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                      sample_info$allele == &quot;par&quot; &amp;
+                                                               sample_info$genotype == &quot;WT&quot;,],
+                                 .info3 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                      sample_info$allele == &quot;cer&quot; &amp;
+                                                               sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .info4 = sample_info[sample_info$organism == &quot;hyb&quot; &amp; 
+                                                        sample_info$allele == &quot;par&quot; &amp;
+                                                               sample_info$genotype == paste0(.tf, &quot;delete&quot;),],
+                                 .normalization = .normalization, .plotlims = .plotlims,
+                                 .show_wt = .show_wt, .show_tfdel = .show_tfdel)
   }
   return(p)
 }

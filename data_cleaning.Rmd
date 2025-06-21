@@ -12,7 +12,7 @@ Here's where we load the 3' tagseq samples, normalize them, and assemble them in
 
 Working with RNAseq data published in Krieger et al. 2020
 
-```{r package-loading, cache=TRUE, echo = FALSE}
+```{r package-loading, echo = FALSE}
 sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "openxlsx", "matrixStats"), require, character.only=TRUE)
 ```
 

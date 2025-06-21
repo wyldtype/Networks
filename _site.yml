@@ -10,4 +10,6 @@ navbar:
       href: data_cleaning.html
     - text: "DESeq2"
       href: DESeq2.html
+    - text: "Comparing Wildtype LowN Response"
+      href: Fig_WT.html
 output_dir: "docs"

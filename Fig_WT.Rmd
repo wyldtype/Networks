@@ -216,12 +216,12 @@ getOrthoCor <- function(.g, .org1, .al1, .org2, .al2) {
   expr1 <- collapsed |> filter(gene_name == .g &
                                  organism == .org1 &
                                  allele == .al1) |> 
-    rename("mean_expr1"="mean_expr") |> 
+    dplyr::rename("mean_expr1"="mean_expr") |> 
     select(gene_name, time_point_num, mean_expr1)
   expr2 <- collapsed |> filter(gene_name == .g &
                                  organism == .org2 &
                                  allele == .al2) |> 
-    rename("mean_expr2"="mean_expr") |> 
+    dplyr::rename("mean_expr2"="mean_expr") |> 
     select(gene_name, time_point_num, mean_expr2)
   outdf <- inner_join(expr1, expr2,
                       by = c("gene_name", "time_point_num"))
@@ -238,7 +238,7 @@ plotGenesTFdel(.gene_idxs = "YGR192C", .tf = "GCR2", .show_tfdel = FALSE,
                .normalization = "none", .parents_or_hybrid = "parents")
 ```
 Calculating ortholog correlations:
-```{r, warning=FALSE}
+```{r, warning=FALSE, cache=TRUE}
 # cor(Scer, Spar)
 genedf$cor_parents <- map(genedf$gene_name, 
                           .f = getOrthoCor, 
@@ -299,8 +299,8 @@ Furthermore these genes tend to correlate with one or the other parent's express
 ```{r}
 sgd_lookup <- read_delim("data_files/downloaded_genomes_and_features/SGD_features.tab", delim = "\t", col_names = FALSE) |> filter(X2 == "ORF") |> 
   select(X4, X5) |> 
-  rename("gene_name"="X4",
-         "common_name"="X5")
+  dplyr::rename("gene_name"="X4",
+                "common_name"="X5")
 plotdf <- genedf |> drop_na() |> 
   filter(cor_parents < cor_thresh &
            !is_conserved_unresponsive) |> 
@@ -320,16 +320,20 @@ ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
   ylab("correlation (Spar, Hyb)")
 ```
 
+```{r saving}
+save(genedf, file = "data_files/GeneDataFrame.RData")
+```
 
 
-```{r}
-TFdf <- TFdeldf |> select(gene_name, deletion, timepoint, organism, lfc, padj) |>
-  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
-              names_from = "organism", values_from = c("lfc", "padj")) |> 
-  right_join(y = TFdel_lookup, by = c("gene_name"="systematic"),
-             relationship = "many-to-one")
-
+```{r heatmap}
 # TODO: adapt to use TFdeldf if needed
+# 
+# TFdf <- TFdeldf |> select(gene_name, deletion, timepoint, organism, lfc, padj) |>
+#   pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+#               names_from = "organism", values_from = c("lfc", "padj")) |> 
+#   right_join(y = TFdel_lookup, by = c("gene_name"="systematic"),
+#              relationship = "many-to-one")
+
 # # heatmap of TF lfc between species in each environment
 # effectsdf <- TFdf |> 
 #   drop_na() |> 

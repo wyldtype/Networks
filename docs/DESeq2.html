@@ -254,6 +254,9 @@ $(document).ready(function () {
 <li>
   <a href="DESeq2.html">DESeq2</a>
 </li>
+<li>
+  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+</li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         
@@ -277,40 +280,45 @@ $(document).ready(function () {
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 eff_thresh &lt;- 1
 p_thresh &lt;- 0.05
-GeneNames &lt;- rownames(counts)
+GeneNames &lt;- rownames(counts)</code></pre>
+<pre class="r"><code># data organizing
+counts &lt;- list(cer_cer_TP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;cer&quot;],
+               par_par_TP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;par&quot;],
+               hyb_cer_TP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
+               hyb_par_TP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;],
+               hyb_hyb_TP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;],
+               cer_cer_TP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;cer&quot;],
+               par_par_TP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;par&quot;],
+               hyb_cer_TP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
+               hyb_par_TP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;],
+               hyb_hyb_TP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;],
+               cer_cer_TP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;cer&quot;],
+               par_par_TP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;par&quot;],
+               hyb_cer_TP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
+               hyb_par_TP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;],
+               hyb_hyb_TP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;])
 
-# data organizing
-counts &lt;- list(cerTP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;cer&quot;],
-               parTP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;par&quot;],
-               hycTP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
-               hypTP1 = counts[,sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;],
-               cerTP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;cer&quot;],
-               parTP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;par&quot;],
-               hycTP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
-               hypTP2 = counts[,sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;],
-               cerTP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;cer&quot;],
-               parTP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;par&quot;],
-               hycTP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;],
-               hypTP3 = counts[,sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;])
-
-infos &lt;- list(cerTP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;cer&quot;,],
-               parTP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;par&quot;,],
-               hycTP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
-               hypTP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,],
-               cerTP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;cer&quot;,],
-               parTP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;par&quot;,],
-               hycTP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
-               hypTP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,],
-               cerTP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;cer&quot;,],
-               parTP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;par&quot;,],
-               hycTP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
-               hypTP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,])</code></pre>
+infos &lt;- list(cer_cer_TP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;cer&quot;,],
+              par_par_TP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;par&quot;,],
+              hyb_cer_TP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
+              hyb_par_TP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,],
+              hyb_hyb_TP1 = sample_info[sample_info$time_point_num == 0 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;,],
+              cer_cer_TP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;cer&quot;,],
+              par_par_TP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;par&quot;,],
+              hyb_cer_TP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
+              hyb_par_TP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,],
+              hyb_hyb_TP2 = sample_info[sample_info$time_point_num == 60 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;,],
+              cer_cer_TP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;cer&quot;,],
+              par_par_TP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;par&quot;,],
+              hyb_cer_TP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;cer&quot;,],
+              hyb_par_TP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;par&quot;,],
+              hyb_hyb_TP3 = sample_info[sample_info$time_point_num == 960 &amp; sample_info$organism == &quot;hyb&quot; &amp; sample_info$allele == &quot;hyb&quot;,])</code></pre>
 <div id="removing-samples-missing-replicates" class="section level2">
 <h2>Removing samples missing replicates</h2>
 <p>Rationale: DESeq2 still tries to estimate a log2 fold change when a
 genotype has only one replicate. Example: YAP1 in hybrids (any
 timepoint). In parents it has 2 replicates:</p>
-<pre class="r"><code>infos$cerTP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
+<pre class="r"><code>infos$cer_cer_TP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
 <pre><code>##               time_point_str
 ## genotype       0 h, YPD
 ##   ACE2delete          2
@@ -361,7 +369,7 @@ timepoint). In parents it has 2 replicates:</p>
 ##   YAP1delete          2
 ##   ZAP1delete          1</code></pre>
 <p>In hybrids, one:</p>
-<pre class="r"><code>infos$hycTP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
+<pre class="r"><code>infos$hyb_cer_TP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
 <pre><code>##               time_point_str
 ## genotype       0 h, YPD
 ##   ACE2delete          2
@@ -410,146 +418,11 @@ timepoint). In parents it has 2 replicates:</p>
 ##   YAP1delete          1
 ##   ZAP1delete          3</code></pre>
 <p>While most padj are NA, not all are:</p>
-<pre class="r"><code>test &lt;- DESeq(DESeqDataSetFromMatrix(countData = counts$hycTP1,
-                                     colData = infos$hycTP1,
-                                     design = ~ genotype))</code></pre>
-<pre><code>## converting counts to integer mode</code></pre>
-<pre><code>## Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in design
-## formula are characters, converting to factors</code></pre>
-<pre><code>## estimating size factors</code></pre>
-<pre><code>## estimating dispersions</code></pre>
-<pre><code>## gene-wise dispersion estimates</code></pre>
-<pre><code>## mean-dispersion relationship</code></pre>
-<pre><code>## final dispersion estimates</code></pre>
-<pre><code>## fitting model and testing</code></pre>
-<pre><code>## -- replacing outliers and refitting for 847 genes
-## -- DESeq argument &#39;minReplicatesForReplace&#39; = 7 
-## -- original counts are preserved in counts(dds)</code></pre>
-<pre><code>## estimating dispersions</code></pre>
-<pre><code>## fitting model and testing</code></pre>
-<pre class="r"><code>results(test, contrast = c(&quot;genotype&quot;, &quot;YAP1delete&quot;, &quot;WT&quot;),
-        alpha = 0.05)[,&quot;padj&quot;] |&gt; table(useNA = &quot;always&quot;)</code></pre>
-<pre><code>## 
-## 1.43090434253847e-25  2.9982105567121e-19 1.42074748743576e-14 2.68749472861506e-06 
-##                    1                    1                    1                    1 
-## 0.000181286658972453 0.000283717383935079 0.000366612902221774 0.000415148131242107 
-##                    1                    2                    1                    1 
-##  0.00048032993678425 0.000656169211841442 0.000969480604639106  0.00161759987294327 
-##                    3                    1                    4                    2 
-##  0.00258908228935288  0.00264222652579838  0.00269771150145266  0.00291759455363611 
-##                    1                    2                    2                    1 
-##  0.00318650292736218  0.00319361906168205  0.00377993533048497  0.00396211460394911 
-##                    1                    1                    1                    1 
-##  0.00529529918484014  0.00694565989729658   0.0103071649197221   0.0136020541419941 
-##                    1                    1                    1                    2 
-##   0.0171825870053596   0.0174835571077119   0.0184074907346655   0.0186071183202682 
-##                    4                    1                    1                    1 
-##   0.0196526490394917   0.0198719000046585   0.0199457624255634   0.0205801947997679 
-##                    5                    1                    1                    1 
-##   0.0218568684055414   0.0270896828108655   0.0297649220484673   0.0367852823006487 
-##                    1                    2                    1                    2 
-##   0.0415896507990819   0.0420240252343842   0.0420673761879613   0.0432043795226236 
-##                    1                    1                    1                    1 
-##   0.0436588683558133   0.0439420892619984   0.0474661144655885   0.0480133062135061 
-##                    2                    1                    1                    2 
-##   0.0491654423787593   0.0513626838889406   0.0515868786301986   0.0517254048138739 
-##                    1                    1                    1                    1 
-##   0.0520490954531787   0.0525526242729469    0.063454358839866   0.0644181352947854 
-##                    6                    2                    1                    1 
-##   0.0674250453446925   0.0684992531648033   0.0689662034452609   0.0730372372145672 
-##                    1                    1                    1                    1 
-##   0.0738721360540228   0.0747861709087516   0.0812094556874841   0.0834795264550832 
-##                    3                    1                    1                    2 
-##   0.0849705567829731   0.0933581043819645   0.0954457602871145     0.10233021142781 
-##                    1                    2                    1                    3 
-##    0.105879551158718    0.111170839147001    0.113657793947479    0.114365399574288 
-##                    2                    1                    3                    1 
-##    0.116895865834282    0.120506856887217    0.122251365451573    0.132698193468934 
-##                    2                    2                    1                    3 
-##    0.136331185065281    0.136874004930019    0.139598283971601    0.142216363614409 
-##                    1                    1                    1                    1 
-##     0.15051728933518    0.168135207513944    0.173981207515588    0.176640241310567 
-##                    1                    2                    1                    1 
-##    0.182490909264238    0.185022892827603    0.189009272813793    0.189127526681359 
-##                    1                    1                    1                    1 
-##    0.203312829121375    0.204917890050065    0.206012408782247    0.214918660329167 
-##                    1                    1                    2                    3 
-##    0.215944560214826    0.220000265994228    0.227026479381245    0.228173971268039 
-##                    1                    1                    1                    2 
-##    0.231404099247102    0.231541555131674    0.235199334880799    0.238425886787257 
-##                    1                    1                    2                    1 
-##    0.240523036368874    0.247247668405719    0.257840335309396    0.260287367093598 
-##                    1                    5                    1                    1 
-##    0.266476891237281    0.267875984548336    0.267972110424841    0.268022833617614 
-##                    1                    1                    1                    1 
-##    0.269256349961143    0.270345603056445     0.27165051068579    0.278464537142617 
-##                    1                    1                    1                    1 
-##    0.279184298442345    0.279780650330438    0.286096853432192     0.29001786564063 
-##                    1                    1                    2                    2 
-##    0.291083038446203     0.30706637604374    0.307849822414677    0.309909270567667 
-##                    1                    1                    1                    1 
-##     0.31533058629948    0.318264171024513    0.325805185573988    0.335957013937587 
-##                    4                    1                    1                    4 
-##    0.337510812474555    0.339707837388234    0.342956741371406    0.355578041238696 
-##                    1                    1                    1                    2 
-##    0.357771092716634    0.361435421250568    0.367943446811581    0.376753877317816 
-##                    1                    1                    2                    1 
-##    0.383563819594286    0.399409609703392     0.40045643406277    0.407752431925981 
-##                    4                    3                    1                    2 
-##    0.413405137229189    0.414431821072755    0.414714016738934    0.417782434902761 
-##                    1                    1                    3                    1 
-##     0.42490959183969    0.425382079014395    0.426427370441509     0.42655424973774 
-##                    3                    1                    1                    1 
-##    0.438443509315097    0.439518613271581    0.440079204520642     0.44724781402172 
-##                    1                    1                    2                    1 
-##    0.448662443603226    0.448891699414014    0.454002757570938     0.46196506279359 
-##                    1                    5                    2                    1 
-##    0.469488436623713    0.475544774269808    0.490700537827722    0.495888388835055 
-##                    2                    1                    1                    1 
-##    0.515997633501507    0.528109788270896    0.529130933123112    0.539595640996016 
-##                    1                    2                    3                    1 
-##    0.539723207568449    0.546106485916499    0.548825289990503    0.550430201173874 
-##                    1                    3                    1                    4 
-##    0.554008501883023    0.555891165123919    0.559145504674505    0.562481476661346 
-##                    3                    1                    1                    1 
-##    0.568778273603836    0.569771927808554    0.579497743405993    0.582811746978228 
-##                    1                    1                    1                    2 
-##    0.599934606296497    0.607392147805526     0.61638380067018    0.619107187133018 
-##                    3                    1                    1                    1 
-##    0.621803720474966    0.628122706252772    0.629673936693562     0.63178054565379 
-##                    1                    1                    3                    1 
-##    0.634678557151862    0.642411346464461    0.645066305000813    0.655151620680631 
-##                    1                    2                    1                    1 
-##    0.667781181537115    0.669531668997952     0.67304694839437    0.680904364837795 
-##                    2                    2                    1                    1 
-##    0.682295826753884    0.694988043013156    0.698641449402166    0.724360016393876 
-##                    1                    1                    3                    1 
-##    0.726667487189093    0.728648819525219      0.7286493575349    0.738203353144954 
-##                    1                    1                    1                    1 
-##    0.745569186115519     0.74577595917945    0.775489742001816    0.789768515627515 
-##                    1                    1                    1                    1 
-##    0.800948433720485    0.802591081595998    0.819518233609203    0.824952728056109 
-##                    1                    1                    2                    1 
-##    0.833275151063186     0.83940639917395    0.845668781738344    0.847544065578187 
-##                    1                    1                    4                    1 
-##    0.850449123099479    0.856479761557532     0.85686828078896    0.858587361791506 
-##                    1                    1                    2                    4 
-##    0.860634407844867     0.86178733293697    0.870202602226523    0.870257095667044 
-##                    1                    2                    1                    3 
-##    0.875622537108205    0.880162613983865    0.892946593553368    0.904583870616761 
-##                    7                    1                    1                    4 
-##    0.913934047756438    0.915529634879564     0.92395593325838    0.924269175067686 
-##                    2                    1                    1                    1 
-##    0.934470942514795    0.937456972966676    0.941166163240772    0.948057063377087 
-##                    2                    1                    2                    1 
-##     0.94971227868491    0.954790508891761    0.956533644133331    0.968876615821533 
-##                    2                   11                    1                    1 
-##    0.971981939114495    0.973757037600563    0.980627810300178    0.981987643544276 
-##                    3                    2                    1                    3 
-##    0.982161702089935    0.990890261596772    0.994526357278452    0.996310598328663 
-##                    1                    1                    1                    1 
-##                 &lt;NA&gt; 
-##                 4987</code></pre>
+<pre class="r"><code># test &lt;- DESeq2::DESeq(DESeqDataSetFromMatrix(countData = counts$hyb_cer_TP1,
+#                                      colData = infos$hyb_cer_TP1,
+#                                      design = ~ genotype))
+# results(test, contrast = c(&quot;genotype&quot;, &quot;YAP1delete&quot;, &quot;WT&quot;),
+#         alpha = 0.05)[,&quot;padj&quot;] |&gt; table(useNA = &quot;always&quot;)</code></pre>
 <p>Looping through counts/info to remove genotypes that don’t have 2
 replicates at a certain timepoint.</p>
 <pre class="r"><code># Note: b/c we split the individual timepoints into separate info dataframes, this only removes genotypes from the timepoint where they have no replicates (using a 2d table that includes timepoint is a relic but is helpful for reminding us what timepoint we are looking at)
@@ -566,7 +439,7 @@ updateCountsCols &lt;- function(.counts, .info) {
 counts &lt;- map2(counts, infos, updateCountsCols)
 
 # now YAP1 isn&#39;t in hybrid
-infos$cerTP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
+infos$cer_cer_TP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
 <pre><code>##               time_point_str
 ## genotype       0 h, YPD
 ##   ACE2delete          2
@@ -615,7 +488,7 @@ infos$cerTP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
 ##   URE2delete          2
 ##   WT                 33
 ##   YAP1delete          2</code></pre>
-<pre class="r"><code>infos$hycTP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
+<pre class="r"><code>infos$hyb_cer_TP1 |&gt; select(genotype, time_point_str) |&gt; table()</code></pre>
 <pre><code>##               time_point_str
 ## genotype       0 h, YPD
 ##   ACE2delete          2
@@ -674,6 +547,9 @@ dds &lt;- map2(counts, infos, \(x, y) {
   return(output)
 })</code></pre>
 <pre><code>## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
 ## converting counts to integer mode
 ## converting counts to integer mode
 ## converting counts to integer mode
@@ -752,66 +628,80 @@ dds &lt;- map(dds, DESeq, parallel = TRUE)</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
 <pre><code>## mean-dispersion relationship</code></pre>
 <pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
 <p>Checking positive control: TDH3 decreases in GCR2delete at TP1 (any
 timepoint, any species). We’ll use Scer TP1 as the example.</p>
-<pre class="r"><code># test &lt;- results(dds$cerTP1, contrast = c(&quot;genotype&quot;, &quot;GCR2delete&quot;, &quot;WT&quot;),
-#                 alpha = 0.05)
-# test[&quot;YGR192C&quot;,] # down in Scer</code></pre>
+<pre class="r"><code>test &lt;- results(dds$cer_cer_TP3, contrast = c(&quot;genotype&quot;, &quot;GCR2delete&quot;, &quot;WT&quot;),
+                alpha = 0.05)
+test[&quot;YGR192C&quot;,] # down in Scer</code></pre>
+<pre><code>## log2 fold change (MLE): genotype GCR2delete vs WT 
+## Wald test p-value: genotype GCR2delete vs WT 
+## DataFrame with 1 row and 6 columns
+##          baseMean log2FoldChange     lfcSE      stat
+##         &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;
+## YGR192C   16876.7       -1.33222  0.142197  -9.36886
+##              pvalue        padj
+##           &lt;numeric&gt;   &lt;numeric&gt;
+## YGR192C 7.33198e-21 7.70151e-18</code></pre>
 </div>
 <div id="formatting-data" class="section level2">
 <h2>Formatting Data</h2>
 <pre class="r"><code># extracting LFCs, SEs, and pvalues from each TFdel-WT comparison in each 
 # species and output as TFdeldfs
-griddfTP1 &lt;- bind_rows(infos$cerTP1,
-                    infos$parTP1,
-                    infos$hycTP1,
-                    infos$hypTP1) |&gt; 
+griddfTP1 &lt;- bind_rows(infos$cer_cer_TP1,
+                    infos$par_par_TP1,
+                    infos$hyb_cer_TP1,
+                    infos$hyb_par_TP1,
+                    infos$hyb_hyb_TP1) |&gt; 
   select(genotype, allele, organism) |&gt; 
   filter(genotype != &quot;WT&quot;) |&gt; 
-  mutate(timepoint = &quot;TP1&quot;,
-         orgallele = if_else(organism == &quot;hyb&quot;,
-                             false = organism,
-                             true = if_else(allele == &quot;cer&quot;,
-                                            true = &quot;hyc&quot;,
-                                            false = &quot;hyp&quot;))) |&gt; 
+  mutate(timepoint = &quot;TP1&quot;) |&gt; 
   unique()
-griddfTP2 &lt;- bind_rows(infos$cerTP2,
-                       infos$parTP2,
-                       infos$hycTP2,
-                       infos$hypTP2) |&gt; 
+griddfTP2 &lt;- bind_rows(infos$cer_cer_TP2,
+                       infos$par_par_TP2,
+                       infos$hyb_cer_TP2,
+                       infos$hyb_par_TP2,
+                       infos$hyb_hyb_TP2) |&gt; 
   select(genotype, allele, organism) |&gt; 
   filter(genotype != &quot;WT&quot;) |&gt; 
-  mutate(timepoint = &quot;TP2&quot;,
-         orgallele = if_else(organism == &quot;hyb&quot;,
-                             false = organism,
-                             true = if_else(allele == &quot;cer&quot;,
-                                            true = &quot;hyc&quot;,
-                                            false = &quot;hyp&quot;))) |&gt; 
+  mutate(timepoint = &quot;TP2&quot;) |&gt; 
   unique()
-griddfTP3 &lt;- bind_rows(infos$cerTP3,
-                       infos$parTP3,
-                       infos$hycTP3,
-                       infos$hypTP3) |&gt; 
+griddfTP3 &lt;- bind_rows(infos$cer_cer_TP3,
+                       infos$par_par_TP3,
+                       infos$hyb_cer_TP3,
+                       infos$hyb_par_TP3,
+                       infos$hyb_hyb_TP3) |&gt; 
   select(genotype, allele, organism) |&gt; 
   filter(genotype != &quot;WT&quot;) |&gt; 
-  mutate(timepoint = &quot;TP3&quot;,
-         orgallele = if_else(organism == &quot;hyb&quot;,
-                             false = organism,
-                             true = if_else(allele == &quot;cer&quot;,
-                                            true = &quot;hyc&quot;,
-                                            false = &quot;hyp&quot;))) |&gt; 
+  mutate(timepoint = &quot;TP3&quot;) |&gt; 
   unique()
 griddf &lt;- bind_rows(griddfTP1, griddfTP2, griddfTP3)
 
 TFdeldf &lt;- map(c(1:nrow(griddf)), \(i) {
   del &lt;- griddf$genotype[i] |&gt; as.character()
-  org &lt;- griddf$orgallele[i]
+  org &lt;- griddf$organism[i]
+  al &lt;- griddf$allele[i]
   tp &lt;- griddf$timepoint[i]
-  res &lt;- results(dds[[paste0(org, tp)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
+  res &lt;- results(dds[[paste(org, al, tp, sep = &quot;_&quot;)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
                  alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
   return(tibble(gene_name = GeneNames,
                 deletion = gsub(&quot;delete&quot;, &quot;&quot;, del),
                 organism = org,
+                allele = al,
                 timepoint = tp,
                 basemean = res$baseMean,
                 lfc = res$log2FoldChange,
@@ -824,23 +714,23 @@ replicates:</p>
 <pre class="r"><code>length(unique(TFdeldf$deletion))</code></pre>
 <pre><code>## [1] 46</code></pre>
 <pre class="r"><code>sum(is.na(TFdeldf))</code></pre>
-<pre><code>## [1] 12492</code></pre>
+<pre><code>## [1] 12812</code></pre>
 <pre class="r"><code>sum(is.na(TFdeldf$padj))</code></pre>
-<pre><code>## [1] 3123</code></pre>
+<pre><code>## [1] 3203</code></pre>
 <pre class="r"><code>table(is.na(TFdeldf$padj), TFdeldf$timepoint)</code></pre>
 <pre><code>##        
-##            TP1    TP2    TP3
-##   FALSE 893801 851088 888616
-##   TRUE    1152    993    978</code></pre>
+##             TP1     TP2     TP3
+##   FALSE 1108121 1065408 1097617
+##   TRUE     1192    1033     978</code></pre>
 <pre class="r"><code>sum(is.na(TFdeldf$lfc)) + sum(is.na(TFdeldf$lfcSE)) + sum(is.na(TFdeldf$pval)) + sum(is.na(TFdeldf$padj))</code></pre>
-<pre><code>## [1] 12492</code></pre>
+<pre><code>## [1] 12812</code></pre>
 <pre class="r"><code>TFdeldf &lt;- drop_na(TFdeldf)
 length(unique(TFdeldf$deletion)) # we shouldn&#39;t lose any TFs entirely</code></pre>
 <pre><code>## [1] 46</code></pre>
 <pre class="r"><code>sum(TFdeldf$padj &lt; p_thresh)</code></pre>
-<pre><code>## [1] 89795</code></pre>
+<pre><code>## [1] 126472</code></pre>
 <pre class="r"><code>sum(TFdeldf$padj &gt;= p_thresh) # should have way fewer significant effects</code></pre>
-<pre><code>## [1] 2543710</code></pre>
+<pre><code>## [1] 3144674</code></pre>
 </div>
 <div
 id="negative-control-wt-samples-28-vs-2-leave-one-out-as-sham-tfdels"
@@ -892,6 +782,9 @@ dds_sham1 &lt;- map2(counts_sham1, infos, \(x, y) {
 ## converting counts to integer mode
 ## converting counts to integer mode
 ## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
 ## converting counts to integer mode</code></pre>
 <pre class="r"><code>dds_sham2 &lt;- map2(counts_sham2, infos, \(x, y) {
   output &lt;- DESeqDataSetFromMatrix(countData = x,
@@ -900,6 +793,9 @@ dds_sham1 &lt;- map2(counts_sham1, infos, \(x, y) {
   return(output)
 })</code></pre>
 <pre><code>## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
+## converting counts to integer mode
 ## converting counts to integer mode
 ## converting counts to integer mode
 ## converting counts to integer mode
@@ -955,6 +851,19 @@ dds_sham1 &lt;- map(dds_sham1, DESeq, parallel = TRUE)</code></pre>
 <pre><code>## estimating dispersions</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
 <pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## -- note: fitType=&#39;parametric&#39;, but the dispersion trend was not well captured by the
+##    function: y = a/x + b, and a local regression fit was automatically substituted.
+##    specify fitType=&#39;local&#39; or &#39;mean&#39; to avoid this message next time.</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
 <pre><code>## -- note: fitType=&#39;parametric&#39;, but the dispersion trend was not well captured by the
 ##    function: y = a/x + b, and a local regression fit was automatically substituted.
 ##    specify fitType=&#39;local&#39; or &#39;mean&#39; to avoid this message next time.</code></pre>
@@ -977,11 +886,11 @@ dds_sham1 &lt;- map(dds_sham1, DESeq, parallel = TRUE)</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
 <pre><code>## mean-dispersion relationship</code></pre>
 <pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
-<pre><code>## -- replacing outliers and refitting for 1 genes
-## -- DESeq argument &#39;minReplicatesForReplace&#39; = 7 
-## -- original counts are preserved in counts(dds)</code></pre>
+<pre><code>## estimating size factors</code></pre>
 <pre><code>## estimating dispersions</code></pre>
-<pre><code>## fitting model and testing</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
 <pre><code>## estimating size factors</code></pre>
 <pre><code>## estimating dispersions</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
@@ -1033,6 +942,19 @@ dds_sham1 &lt;- map(dds_sham1, DESeq, parallel = TRUE)</code></pre>
 <pre><code>## estimating dispersions</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
 <pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## -- note: fitType=&#39;parametric&#39;, but the dispersion trend was not well captured by the
+##    function: y = a/x + b, and a local regression fit was automatically substituted.
+##    specify fitType=&#39;local&#39; or &#39;mean&#39; to avoid this message next time.</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
 <pre><code>## -- note: fitType=&#39;parametric&#39;, but the dispersion trend was not well captured by the
 ##    function: y = a/x + b, and a local regression fit was automatically substituted.
 ##    specify fitType=&#39;local&#39; or &#39;mean&#39; to avoid this message next time.</code></pre>
@@ -1050,6 +972,16 @@ dds_sham1 &lt;- map(dds_sham1, DESeq, parallel = TRUE)</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
 <pre><code>## mean-dispersion relationship</code></pre>
 <pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## estimating size factors</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
+<pre><code>## mean-dispersion relationship</code></pre>
+<pre><code>## final dispersion estimates, fitting model and testing: 4 workers</code></pre>
+<pre><code>## -- replacing outliers and refitting for 1 genes
+## -- DESeq argument &#39;minReplicatesForReplace&#39; = 7 
+## -- original counts are preserved in counts(dds)</code></pre>
+<pre><code>## estimating dispersions</code></pre>
+<pre><code>## fitting model and testing</code></pre>
 <pre><code>## estimating size factors</code></pre>
 <pre><code>## estimating dispersions</code></pre>
 <pre><code>## gene-wise dispersion estimates: 4 workers</code></pre>
@@ -1072,17 +1004,19 @@ dds_sham1 &lt;- map(dds_sham1, DESeq, parallel = TRUE)</code></pre>
 # test[&quot;YGR192C&quot;,] # shouldn&#39;t be DE anymore, WT vs WT
 
 ### Formatting data
-# extracting LFCs, SEs, and pvalues from each TFdel-WT comparison in each 
+# extracting LFCs, SEs, and pvalues from each TFdel-WT comparison in each
 # species and output as TFdeldfs
 TFdeldf_sham1 &lt;- map(c(1:nrow(griddf)), \(i) {
   del &lt;- griddf$genotype[i] |&gt; as.character()
-  org &lt;- griddf$orgallele[i]
+  org &lt;- griddf$organism[i]
+  al &lt;- griddf$allele[i]
   tp &lt;- griddf$timepoint[i]
-  res &lt;- results(dds_sham1[[paste0(org, tp)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
+  res &lt;- results(dds_sham1[[paste(org, al, tp, sep = &quot;_&quot;)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
                  alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
   return(tibble(gene_name = GeneNames,
                 deletion = gsub(&quot;delete&quot;, &quot;&quot;, del),
                 organism = org,
+                allele = al,
                 timepoint = tp,
                 basemean = res$baseMean,
                 lfc = res$log2FoldChange,
@@ -1093,13 +1027,15 @@ TFdeldf_sham1 &lt;- map(c(1:nrow(griddf)), \(i) {
 
 TFdeldf_sham2 &lt;- map(c(1:nrow(griddf)), \(i) {
   del &lt;- griddf$genotype[i] |&gt; as.character()
-  org &lt;- griddf$orgallele[i]
+  org &lt;- griddf$organism[i]
+  al &lt;- griddf$allele[i]
   tp &lt;- griddf$timepoint[i]
-  res &lt;- results(dds_sham2[[paste0(org, tp)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
+  res &lt;- results(dds_sham2[[paste(org, al, tp, sep = &quot;_&quot;)]], contrast = c(&quot;genotype&quot;, del, &quot;WT&quot;),
                  alpha = 0.05, cooksCutoff = FALSE, independentFiltering = FALSE)
   return(tibble(gene_name = GeneNames,
                 deletion = gsub(&quot;delete&quot;, &quot;&quot;, del),
                 organism = org,
+                allele = al,
                 timepoint = tp,
                 basemean = res$baseMean,
                 lfc = res$log2FoldChange,
@@ -1113,17 +1049,18 @@ TFdeldf_sham1 &lt;- drop_na(TFdeldf_sham1)
 TFdeldf_sham2 &lt;- drop_na(TFdeldf_sham2)
 
 sum(TFdeldf_sham1$padj &lt; p_thresh)</code></pre>
-<pre><code>## [1] 1572</code></pre>
+<pre><code>## [1] 782</code></pre>
 <pre class="r"><code>sum(TFdeldf_sham1$padj &gt;= p_thresh) # should have way fewer significant effects</code></pre>
-<pre><code>## [1] 2627055</code></pre>
+<pre><code>## [1] 3265087</code></pre>
 <pre class="r"><code>sum(TFdeldf_sham2$padj &lt; p_thresh)</code></pre>
-<pre><code>## [1] 823</code></pre>
+<pre><code>## [1] 1709</code></pre>
 <pre class="r"><code>sum(TFdeldf_sham2$padj &gt;= p_thresh)</code></pre>
-<pre><code>## [1] 2627804</code></pre>
+<pre><code>## [1] 3264160</code></pre>
 </div>
 <div id="saving" class="section level2">
 <h2>Saving</h2>
-<pre class="r"><code>save(TFdeldf, TFdeldf_sham1, TFdeldf_sham2, file = &quot;data_files/DESeq2.RData&quot;)</code></pre>
+<pre class="r"><code>save(TFdeldf, file = &quot;data_files/DESeq2.RData&quot;)
+# save(TFdeldf, TFdeldf_sham1, TFdeldf_sham2, file = &quot;data_files/DESeq2.RData&quot;)</code></pre>
 </div>
 
 
