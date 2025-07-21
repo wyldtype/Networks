@@ -290,7 +290,7 @@ sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ──────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13
@@ -307,7 +307,7 @@ p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
 eff_thresh &lt;- 1
 TFdel_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/yeastract_46TFs.csv&quot;, col_names = FALSE, col_select = c(1,2), delim = &quot;;&quot;) # gets some warnings, but so far has been fine</code></pre>
 <pre><code>## Rows: 46 Columns: 2
-## ── Column specification ──────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────
 ## Delimiter: &quot;;&quot;
 ## chr (2): X1, X2
 ## 
@@ -348,8 +348,8 @@ print(ggplot(plotdf, aes(x = log2(mean_expr_cer + 1),
                    y = log2(mean_expr_par + 1))) +
   geom_text(aes(label = tf, color = tf %in% NitrogenTFs)) +
   geom_abline(slope = 1, intercept = 0))</code></pre>
-<pre><code>## Warning: Removed 1 row containing missing values or values outside the
-## scale range (`geom_text()`).</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_text()`).</code></pre>
 <p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 </div>
 <div id="how-many-genes-does-each-tfdel-affect-in-each-species"
@@ -364,8 +364,8 @@ multiple yeasts and occurs at the same timepoint and direction:</p>
   select(gene_name, deletion, organism, timepoint, lfc_sign) |&gt;
   group_by(gene_name, deletion, timepoint, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;,
-## &#39;timepoint&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;, &#39;timepoint&#39;.
+## You can override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 33782 / 47512 ( 0.7110204 %)</code></pre>
@@ -379,8 +379,8 @@ timepoint:</p>
   #unique() |&gt; # unique stops double-counting of gene-deletion-lfc_sign combos that affect multiple timepoints, but that currently results in single-species effects becoming a larger portion of the total effects than the timepoint-specific chunk above, which is counterintuitive so commenting it for now
   group_by(gene_name, deletion, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;.
-## You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 27143 / 41481 ( 0.6543478 %)</code></pre>
@@ -457,8 +457,8 @@ plotdf &lt;- sigdf |&gt;
   group_by(gene_name, deletion) |&gt; 
   summarise(orgs = list(organism),
             lfc_sign = unique(lfc_sign))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;.
-## You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>checkOrgs &lt;- function(.query, .orgs, .excludeOthers = FALSE) {
   if (!.excludeOthers) {
     return(all(.query %in% unlist(.orgs)))
@@ -514,8 +514,8 @@ filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;hyb&quot;, &quot;p
   select(deletion, organism, gene_name, lfc_sign) |&gt; 
   unique() |&gt; group_by(deletion, organism, lfc_sign) |&gt; summarise(n = n()) |&gt;
   select(n) |&gt; pull() |&gt; max()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;.
-## You can override using the `.groups` argument.
+<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can
+## override using the `.groups` argument.
 ## Adding missing grouping variables: `deletion`, `organism`</code></pre>
 <pre class="r"><code>ylims_unique &lt;- c(-max_nDE+10, max_nDE-10)
 ylims_shared &lt;- c(-100, 100)
@@ -615,27 +615,25 @@ effects and hyb-par effects?</p>
   ungroup() |&gt; 
   filter(all(list(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;) %in% unlist(orgs))) |&gt; 
   select(deletion) |&gt; pull() |&gt; table()</code></pre>
-<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group
-## was deprecated in dplyr 1.1.0.
+<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group was
+## deprecated in dplyr 1.1.0.
 ## ℹ Please use `reframe()` instead.
-## ℹ When switching from `summarise()` to `reframe()`, remember
-##   that `reframe()` always returns an ungrouped data frame and
-##   adjust accordingly.
-## Call `lifecycle::last_lifecycle_warnings()` to see where this
-## warning was generated.</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;.
-## You can override using the `.groups` argument.</code></pre>
+## ℹ When switching from `summarise()` to `reframe()`, remember that
+##   `reframe()` always returns an ungrouped data frame and adjust
+##   accordingly.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre><code>## 
-##   ACE2   AFT1  ARG80  ARG81   BAS1   CBF1   CHA4  DAL80 
-##    106    523    627    533   1537   2085    283    273 
-##   FKH1   GAT1   GCN4   GCR2   GLN3   GZF3   HAP1   HAP2 
-##    280    269   1086   1220   1564    216    379    886 
-##   HAP3   HAP4   HAP5   INO2   INO4   LEU3   MBP1  MET28 
-##   1155    511    812    503    997     92    682   1598 
-##   MIG1   MSN2   NRG1   PHD1   PHO4   RFX1   RGT1 RIM101 
-##    894    388    603    117   1927    119    469    516 
-##   ROX1   RPN4   RTG1   RTG3   SKN7   SOK2   STB5   SUM1 
-##    940   1012    288    686    120    384   2213    440 
+##   ACE2   AFT1  ARG80  ARG81   BAS1   CBF1   CHA4  DAL80   FKH1   GAT1 
+##    106    523    627    533   1537   2085    283    273    280    269 
+##   GCN4   GCR2   GLN3   GZF3   HAP1   HAP2   HAP3   HAP4   HAP5   INO2 
+##   1086   1220   1564    216    379    886   1155    511    812    503 
+##   INO4   LEU3   MBP1  MET28   MIG1   MSN2   NRG1   PHD1   PHO4   RFX1 
+##    997     92    682   1598    894    388    603    117   1927    119 
+##   RGT1 RIM101   ROX1   RPN4   RTG1   RTG3   SKN7   SOK2   STB5   SUM1 
+##    469    516    940   1012    288    686    120    384   2213    440 
 ##   SWI4   SWI5   TEC1   URE2   YAP1   ZAP1 
 ##   1106    474    408    582    316    432</code></pre>
 <p>Third sanity check: BAS1/CBF1 have no hybrid-unique effects</p>
@@ -649,8 +647,8 @@ effects and hyb-par effects?</p>
   filter(checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quot;),
                      .orgs = orgs, .excludeOthers = FALSE)) |&gt; 
   select(orgs) |&gt; pull()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can
-## override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using
+## the `.groups` argument.</code></pre>
 <pre class="r"><code>map(test, \(o) {
   return(paste0(sort(unique(unlist(o)))))
 }) |&gt; unlist() |&gt; table()</code></pre>

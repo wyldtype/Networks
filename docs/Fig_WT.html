@@ -276,10 +276,10 @@ Network between Scer and Spar</h1>
 
 
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ggVennDiagram&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##         dplyr         readr         tidyr         purrr 
-##          TRUE          TRUE          TRUE          TRUE 
-##       ggplot2        ggpubr   matrixStats ggVennDiagram 
-##          TRUE          TRUE          TRUE          TRUE</code></pre>
+<pre><code>##         dplyr         readr         tidyr         purrr       ggplot2 
+##          TRUE          TRUE          TRUE          TRUE          TRUE 
+##        ggpubr   matrixStats ggVennDiagram 
+##          TRUE          TRUE          TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 
 TFnames &lt;- setdiff(unique(gsub(&quot;delete&quot;, &quot;&quot;, sample_info$genotype)), &quot;WT&quot;)
@@ -413,12 +413,10 @@ responsedf$response &lt;- map(c(1:nrow(responsedf)), \(i) {
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90)) +
   xlab(&quot;response&quot;)</code></pre>
-<pre><code>## Warning in geom_histogram(aes(fill = response), stat =
-## &quot;count&quot;): Ignoring unknown parameters: `binwidth`, `bins`,
-## and `pad`</code></pre>
-<pre><code>## Warning in stat_count(binwidth = 1, geom = &quot;text&quot;, color =
-## &quot;black&quot;, aes(label = after_stat(count)), : Ignoring unknown
-## parameters: `binwidth`</code></pre>
+<pre><code>## Warning in geom_histogram(aes(fill = response), stat = &quot;count&quot;): Ignoring
+## unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
+<pre><code>## Warning in stat_count(binwidth = 1, geom = &quot;text&quot;, color = &quot;black&quot;,
+## aes(label = after_stat(count)), : Ignoring unknown parameters: `binwidth`</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-4-1.png" width="672" />
 What percent of genes are conserved unresponsive in all 3 groups?</p>
 <pre class="r"><code>genedf &lt;- responsedf |&gt; 
@@ -576,7 +574,7 @@ expression:</p>
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ──────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13

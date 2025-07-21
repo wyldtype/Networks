@@ -276,10 +276,10 @@ $(document).ready(function () {
 
 <p>For testing functions:</p>
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2 
-##        TRUE        TRUE        TRUE        TRUE        TRUE 
-##      ggpubr matrixStats 
-##        TRUE        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
+## matrixStats 
+##        TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)</code></pre>
 <p>Plotting functions:</p>
 <pre class="r"><code># plots WT vs TFdel in both species (option to exclude WT or TFdel)
@@ -465,19 +465,16 @@ plotExpressionProfileTFdel(.cts1 = counts[&quot;YPL015C&quot;, sample_info$organ
                            .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,],
                            .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,], 
                            .normalization = &quot;none&quot;)</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;,
-## &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override using the
-## `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;,
-## &#39;genotype&#39;. You can override using the `.groups` argument.
-## Adding missing grouping variables: `time_point_str`,
-## `genotype`
-## Adding missing grouping variables: `time_point_str`,
-## `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
 ## override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can
-## override using the `.groups` argument.</code></pre>
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <p><img src="about_files/figure-html/plotExpressionProfileTFdel-1.png" width="672" /></p>
 <pre class="r"><code># Plots each genotype as a separate line
 plotExpressionProfileTFdels &lt;- function(.cts,
