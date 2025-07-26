@@ -7,10 +7,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, warning=FALSE}
-sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats", "ComplexHeatmap", "circlize", "ggVennDiagram"), require, character.only=TRUE)
+sapply(c("dplyr", "readr", "tidyr", "purrr", "ggplot2", "ggpubr", "matrixStats", "ComplexHeatmap", "circlize", "ggVennDiagram", "ggExtra"), require, character.only=TRUE)
 load("data_files/CleanedCounts.RData")
 load("data_files/DESeq2.RData")
 load("data_files/GeneDataFrame.RData")
+source("utils.R")
 
 sgd_lookup <- read_delim("data_files/downloaded_genomes_and_features/SGD_features.tab", delim = "\t", col_names = FALSE) |> filter(X2 == "ORF") |> 
   select(X4, X5) |> 
@@ -64,6 +65,41 @@ print(ggplot(plotdf, aes(x = log2(mean_expr_cer + 1),
 
 ## How many genes does each TFdel affect in each species?
 
+How many genes are affected in shams vs real knockout lines?
+```{r}
+plotdf <- bind_rows(mutate(TFdeldf, type = "real"),
+                    mutate(TFdeldf_sham1, type = "sham1"),
+                    mutate(TFdeldf_sham2, type = "sham2")) |> 
+  filter(organism == allele) |> 
+  select(gene_name, organism, lfc, padj, type) |> 
+  group_by(organism, type) |> 
+  summarise(nSig = sum(abs(lfc) > eff_thresh & padj < p_thresh))
+p <- ggplot(plotdf, aes(x = type, 
+                        y = nSig)) +
+  geom_histogram(aes(fill = organism), stat = "identity") +
+  geom_text(aes(x = type, y = nSig, label = nSig), nudge_y = 500) +
+  scale_fill_discrete(limits = c("cer", "par", "hyb"),
+                      type = c(conservation_colordf$value[conservation_colordf$limits == "Scer"],
+                               conservation_colordf$value[conservation_colordf$limits == "Spar"],
+                               conservation_colordf$value[conservation_colordf$limits == "Hyb"])) +
+  facet_wrap(~factor(organism, levels = c("cer", "par", "hyb"),
+                     labels = c("Scer", "Spar", "Hyb"))) +
+  theme_classic() +
+  xlab("") +
+  ylab("Number of significantly differentiall expressed\ngenes across all 46 TF knockouts") +
+  theme(legend.position = "none")
+p
+```
+
+For the paper figure:
+```{r figure_sham}
+# pdf("../Umich_Dissertation/chapters/figures/Networks/shams.pdf",
+#     width = 5, height = 4)
+# p
+# dev.off()
+```
+
+
 Barplots of nGenes up or down in response to each TF deletion.
 
 If we only consider a TF effect shared if it affects the same gene in multiple yeasts and occurs at the same timepoint and direction:
@@ -95,7 +131,7 @@ That's not a very big difference, so for now we'll specify they're shared if the
 sigdf <- filter(TFdeldf, padj < p_thresh & abs(lfc) > eff_thresh & organism == allele)
 plotdf <- sigdf |> filter(organism == allele)
 # TF-gene combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
+p <- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
                                 plotdf$deletion[plotdf$organism == "cer"], sep = "_"), 
                    Spar = paste(plotdf$gene_name[plotdf$organism == "par"], 
                                 plotdf$deletion[plotdf$organism == "par"], sep = "_"),
@@ -104,7 +140,7 @@ ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"],
                 scale_fill_gradient(low="grey90",high = "red") +
   ggtitle("TF-gene combination is shared")
 # TF-gene-direction combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
+p_dir <- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
                                 plotdf$deletion[plotdf$organism == "cer"],
                                 sign(plotdf$lfc)[plotdf$organism == "cer"], sep = "_"), 
                    Spar = paste(plotdf$gene_name[plotdf$organism == "par"], 
@@ -116,7 +152,7 @@ ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"],
   scale_fill_gradient(low="grey90",high = "red") +
   ggtitle("TF-gene-direction combination is shared")
 # TF-gene-direction-timepoint combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
+p_dirTP <- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"], 
                                 plotdf$deletion[plotdf$organism == "cer"],
                                 sign(plotdf$lfc)[plotdf$organism == "cer"],
                                 plotdf$timepoint[plotdf$organism == "cer"], sep = "_"), 
@@ -131,6 +167,258 @@ ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == "cer"],
   scale_fill_gradient(low="grey90",high = "red") +
   ggtitle("TF-gene-direction-timepoint combination is shared")
 ```
+For the paper figure:
+```{r figure_Venntfdel}
+# pdf("../Umich_Dissertation/chapters/figures/Networks/VennTFdel.pdf",
+#     width = 4, height = 4)
+# p
+# dev.off()
+```
+
+Number of TFs each gene is affected by in each background:
+```{r nTF histograms}
+plotdf <- expand_grid(gene_name = genedf$gene_name,
+                      organism = c("cer", "hyb", "par"))
+sigdf <- TFdeldf |> filter(abs(lfc) > eff_thresh & padj < p_thresh)
+plotdf$nTFs <- map2(plotdf$gene_name, plotdf$organism, \(g, o) {
+  df_go <- sigdf |> filter(gene_name == g & organism == o & allele == o) |> 
+    select(deletion) |> unique()
+  return(nrow(df_go))
+}) |> unlist()
+p <- ggplot(plotdf, aes(x = nTFs)) +
+  geom_histogram(stat = "count", aes(fill = organism)) +
+  scale_fill_discrete(limits = c("cer", "par", "hyb"),
+                      type = c(conservation_colordf$value[conservation_colordf$limits == "Scer"],
+                               conservation_colordf$value[conservation_colordf$limits == "Spar"],
+                               conservation_colordf$value[conservation_colordf$limits == "Hyb"])) +
+  facet_wrap(~factor(organism, levels = c("cer", "par", "hyb"),
+                     labels = c("Scer", "Spar", "Hyb"))) +
+  theme_classic() +
+  ylab("Number of genes") +
+  xlab("Number of TF knockouts that significantly affect expression of each gene") +
+  theme(legend.position = "none")
+p
+```
+
+For the paper figure:
+```{r figure_powerLaw}
+# pdf("../Umich_Dissertation/chapters/figures/Networks/nTFs.pdf",
+#     width = 9, height = 2)
+# p
+# dev.off()
+```
+
+## Allele-specific TF effects in the hybrid
+```{r}
+cat("correlation between Hyc and Hyp for all genes:")
+plotdf <- TFdeldf |> filter(organism == "hyb" & allele != "hyb") |> 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |> 
+  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+              names_from = "allele", values_from = c("lfc", "padj")) 
+cor(plotdf$lfc_cer, plotdf$lfc_par, use = "complete.obs")
+cat("correlation when Hyc or Hyp are sig:")
+plotdf_oneSig <- plotdf |> 
+  filter(padj_cer < p_thresh | padj_par < p_thresh)
+cor(plotdf_oneSig$lfc_cer, plotdf_oneSig$lfc_par, use = "complete.obs")
+cat("correlation when both alleles are sig:")
+plotdf_bothSig <- plotdf_oneSig |> 
+  filter(padj_cer < p_thresh & padj_par < p_thresh)
+cor(plotdf_bothSig$lfc_cer, plotdf_bothSig$lfc_par, use = "complete.obs")
+cat("correlation when both alleles are sig and in the same direction:")
+plotdf_bothSigSameDir <- plotdf_bothSig |> 
+  filter(sign(lfc_cer) == sign(lfc_par))
+cor(plotdf_bothSigSameDir$lfc_cer, plotdf_bothSigSameDir$lfc_par, use = "complete.obs")
+cat("fraction of effects where both alleles are affected out of cases where at least one allele is affected:")
+nrow(plotdf_bothSig)/nrow(plotdf_oneSig)
+p <- ggplot(data = tibble(n = c(nrow(plotdf_bothSig), 
+                           nrow(plotdf_oneSig) - nrow(plotdf_bothSig)),
+                     type = c("both alleles", "one allele"))) + 
+  geom_bar(aes(x = type, y = n), stat = "identity", 
+           fill = "grey", color = "black") +
+  xlab("") +
+  ylab("number of significant expression effects\n across all 46 TF knockouts") +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  ggtitle("Hybrid allele-specific\n TF knockout effects")
+p
+```
+For the paper figure
+```{r hybrid barplot}
+ pdf("../Umich_Dissertation/chapters/figures/Networks/hybridBarplot.pdf",
+    width = 2.6, height = 3.5)
+p
+dev.off()
+```
+
+
+Fraction of times the combined Hyb is significant when one of the alleles is. (Just for curiousity on which type of count data is has more power in DESeq2)
+```{r}
+plotdf <- TFdeldf |> filter(organism == "hyb") |> 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |> 
+  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+              names_from = "allele", values_from = c("lfc", "padj")) |> 
+  filter(padj_cer < p_thresh | padj_par < p_thresh)
+sum(plotdf$padj_hyb < p_thresh)/nrow(plotdf)
+```
+Fraction of times the combined Hyb is significant when neither alleles is:
+```{r}
+plotdf <- TFdeldf |> filter(organism == "hyb") |> 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |> 
+  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+              names_from = "allele", values_from = c("lfc", "padj")) |> 
+  filter(padj_cer >= p_thresh & padj_par >= p_thresh)
+sum(plotdf$padj_hyb < p_thresh)/nrow(plotdf)
+```
+
+Example hybrid genes in each category
+```{r example genes, results="hide"}
+# first determine categories
+plotdf <- TFdeldf |> filter(organism == "hyb" & allele != "hyb") |> 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |> 
+  pivot_wider(id_cols = c("gene_name", "deletion", "timepoint"),
+              names_from = "allele", values_from = c("lfc", "padj")) |> 
+  filter(padj_cer < p_thresh | padj_par < p_thresh)
+# then select random genes from each group
+highExpressedGenes <- rownames(counts)[rowMeans(counts) > 30]
+gene_Hyc <- plotdf |> filter((padj_cer < p_thresh) & 
+                               !(padj_par < p_thresh) &
+                               (lfc_cer < -10) &
+                               !(abs(lfc_par) > eff_thresh) &
+                               gene_name %in% highExpressedGenes) |> 
+  slice_sample(n = 1)
+gene_Hyp <- plotdf |> filter(!(padj_cer < p_thresh) & 
+                               (padj_par < p_thresh) &
+                               !(abs(lfc_cer) > eff_thresh) &
+                               (abs(lfc_par) > 2*eff_thresh) &
+                               gene_name %in% highExpressedGenes) |> 
+  slice_sample(n = 1)
+gene_bothSame <- plotdf |> filter((padj_cer < p_thresh) & 
+                                    (padj_par < p_thresh) &
+                                    (abs(lfc_cer) > 2*eff_thresh) &
+                                    (abs(lfc_par) > 2*eff_thresh) &
+                                    (sign(lfc_par) == sign(lfc_cer)) &
+                                    gene_name %in% highExpressedGenes) |> 
+  slice_sample(n = 1)
+gene_bothDifferent <- plotdf |> filter((padj_cer < p_thresh) & 
+                                         (padj_par < p_thresh) &
+                                         (abs(lfc_cer) > 2*eff_thresh) &
+                                         (abs(lfc_par) > 2*eff_thresh) &
+                                         (sign(lfc_par) != sign(lfc_cer)) &
+                                         gene_name %in% highExpressedGenes) |> 
+  slice_sample(n = 1)
+
+p_Hyc <- plotGenesTFdel(.gene_idxs = gene_Hyc$gene_name, .tf = gene_Hyc$deletion,
+                        .parents_or_hybrid = "hybrid") +
+  ggtitle(paste("Hyc only\n", gene_Hyc$gene_name, gene_Hyc$deletion, gene_Hyc$timepoint))
+p_Hyp <- plotGenesTFdel(.gene_idxs = gene_Hyp$gene_name, .tf = gene_Hyp$deletion,
+                        .parents_or_hybrid = "hybrid") +
+  ggtitle(paste("Hyp only\n", gene_Hyp$gene_name, gene_Hyp$deletion, gene_Hyp$timepoint))
+p_bothSame <- plotGenesTFdel(.gene_idxs = gene_bothSame$gene_name, 
+                             .tf = gene_bothSame$deletion,
+                             .parents_or_hybrid = "hybrid") +
+  ggtitle(paste("Both, same direction\n", gene_bothSame$gene_name, gene_bothSame$deletion, gene_bothSame$timepoint))
+p_bothDifferent <- plotGenesTFdel(.gene_idxs = gene_bothDifferent$gene_name, 
+                             .tf = gene_bothDifferent$deletion,
+                             .parents_or_hybrid = "hybrid") +
+  ggtitle(paste("Both, opposite directions\n", gene_bothDifferent$gene_name, gene_bothDifferent$deletion, gene_bothDifferent$timepoint))
+ggarrange(p_Hyc, p_Hyp, p_bothSame, p_bothDifferent,
+          nrow = 2, ncol = 2, common.legend = TRUE)
+```
+For the paper figure:
+```{r figure_exampleGenes}
+# # Hyc
+# pdf("../Umich_Dissertation/chapters/figures/Networks/geneExampleHyc.pdf",
+#     width = 3, height = 2.5)
+# p_Hyc
+# dev.off()
+# # Hyp
+# pdf("../Umich_Dissertation/chapters/figures/Networks/geneExampleHyp.pdf",
+#     width = 3, height = 2.5)
+# p_Hyp
+# dev.off()
+# # both same direction
+# pdf("../Umich_Dissertation/chapters/figures/Networks/geneExampleBothSame.pdf",
+#     width = 3, height = 2.5)
+# p_bothSame
+# dev.off()
+# # both different direction
+# pdf("../Umich_Dissertation/chapters/figures/Networks/geneExampleBothDifferent.pdf",
+#     width = 3, height = 2.5)
+# p_bothDifferent
+# dev.off()
+```
+
+
+Scatter plots of log2 fold changes (with example genes labeled)
+
+```{r hybrid allele lfc scatterplots}
+p_both <- ggplot(data = filter(plotdf, padj_cer < p_thresh & padj_par < p_thresh), 
+       aes(x = lfc_cer, y = lfc_par)) + 
+  geom_point(aes(color = sign(lfc_cer) == sign(lfc_par))) +
+  # # comment/uncomment second set of points to know where example
+  # # genes are (ggMarginal can't handle second set of points though)
+  # geom_point(data = bind_rows(gene_bothSame, gene_bothDifferent),
+  #            aes(x = lfc_cer, y = lfc_par), 
+  #            size = 3, shape = 1, color = "gold") +
+  scale_color_discrete(limits = c(TRUE, FALSE),
+                       type = c("black", "red")) +
+  theme_classic() +
+  theme(legend.position = "left") +
+  ggtitle("genes with a significant effect\n in both hybrid alleles") +
+  labs(color = "Fold changes are\nin the same direction",
+       x = "Log2 fold change in Hyc",
+       y = "Log2 fold change in Hyp") +
+  geom_abline(intercept = 0, slope = 1)
+plotdf_one <- filter(plotdf, !(padj_cer < p_thresh & padj_par < p_thresh)) |>
+  slice_sample(n = 10000) |> 
+  mutate(sig_species = if_else(padj_cer < p_thresh,
+                               true = "Hyc",
+                               false = "Hyp"))
+p_one <- ggplot(plotdf_one, aes(x = lfc_cer, y = lfc_par)) + 
+  geom_point(aes(color = sig_species), alpha = 0.25) +
+  # # comment/uncomment second set of points to know where example
+  # # genes are (ggMarginal can't handle second set of points though)
+  # geom_point(data = bind_rows(gene_Hyc, gene_Hyp),
+  #            aes(x = lfc_cer, y = lfc_par),
+  #            shape = 1, size = 3, color = "gold") +
+  scale_color_discrete(limits = c("Hyc", "Hyp"),
+                       type = c(conservation_colordf$value[conservation_colordf$limits == "Scer"], 
+                                conservation_colordf$value[conservation_colordf$limits == "Spar"])) +
+  theme_classic() +
+  theme(legend.position = "left") +
+  ggtitle("genes with a significant effect\n in one hybrid allele") +
+  labs(color = "Differentially\nexpressed allele",
+       x = "Log2 fold change in Hyc",
+       y = "Log2 fold change in Hyp") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 0)
+p_both
+p_one
+```
+
+For the paper figure (versions without ggMarginal so that we can highlight sample points):
+```{r figure_both}
+# pdf("../Umich_Dissertation/chapters/figures/Networks/hybridLFC_both_ExampleAnnotated.pdf", width = 5.5, height = 4)
+# p_both
+# dev.off()
+# pdf("../Umich_Dissertation/chapters/figures/Networks/hybridLFC_one_ExampleAnnotated.pdf", width = 5.5, height = 4)
+# p_one
+# dev.off()
+```
+For the paper figure:
+```{r figure_HybridLFCscatterplots}
+pdf("../Umich_Dissertation/chapters/figures/Networks/hybridLFC_both.pdf",
+    width = 5.5, height = 4)
+grid::grid.draw(ggMarginal(p_both, groupColour = TRUE, groupFill = TRUE, margin = "both"))
+dev.off()
+pdf("../Umich_Dissertation/chapters/figures/Networks/hybridLFC_one.pdf",
+    width = 5.5, height = 4)
+grid::grid.draw(ggMarginal(p_one, groupColour = TRUE, groupFill = TRUE, margin = "both"))
+dev.off()
+```
+
+
 
 ```{r plotBarplot, warning=FALSE}
 plotBarplot <- function(.updf, .downdf, .title) {
@@ -309,11 +597,11 @@ map(test, \(o) {
   return(paste0(sort(unique(unlist(o)))))
 }) |> unlist() |> table()
 ```
-How many replicates do they have?
+How many replicates do BAS1/CBF1 have in hybrids?
 ```{r}
 sample_info |> filter(genotype %in% c("BAS1delete", "CBF1delete") & organism == "hyb" & allele == "hyb") |> select(time_point_str, genotype) |> table()
 ```
-
+1 in CBF1, that would do it.
 
 ## What percent of divergent vs conserved wildtype nitrogen responses are responding to TF deletions?
 ```{r}

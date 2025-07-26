@@ -644,36 +644,30 @@ standardizeGS2018ID(&quot;G8_G12_GS2018&quot;)</code></pre>
 <pre class="r"><code>sample_info |&gt; filter(organism == &quot;hyb&quot; &amp; grepl(&quot;GS2018&quot;, well_flask_ID)) |&gt; 
   select(well_flask_ID) |&gt; table()</code></pre>
 <pre><code>## well_flask_ID
-## A10_G12_GS2018 A11_G12_GS2018 A12_G12_GS2018  A3_G12_GS2018 
-##              3              3              3              6 
-##  A4_G12_GS2018  A5_G12_GS2018  A6_G12_GS2018  A9_G12_GS2018 
-##              6              6              6              3 
-## B10_G12_GS2018 B11_G12_GS2018 B12_G12_GS2018  B3_G12_GS2018 
-##              3              3              3              6 
-##  B4_G12_GS2018  B5_G12_GS2018  B6_G12_GS2018  B9_G12_GS2018 
-##              6              6              6              3 
-## C10_G12_GS2018 C11_G12_GS2018 C12_G12_GS2018  C3_G12_GS2018 
-##              3              3              3              6 
-##  C4_G12_GS2018  C5_G12_GS2018  C6_G12_GS2018  C9_G12_GS2018 
-##              6              6              6              3 
-## D10_G12_GS2018 D11_G12_GS2018 D12_G12_GS2018  D3_G12_GS2018 
-##              3              3              3              6 
-##  D4_G12_GS2018  D5_G12_GS2018  D6_G12_GS2018  D9_G12_GS2018 
-##              6              6              6              3 
-## E10_WT2_GS2018 E11_WT2_GS2018 E12_WT2_GS2018  E3_WT2_GS2018 
-##              3              3              3              6 
-##  E4_WT2_GS2018  E5_WT2_GS2018  E6_WT2_GS2018  E9_WT2_GS2018 
-##              6              6              6              3 
-## F10_WT2_GS2018 F11_WT2_GS2018 F12_WT2_GS2018  F3_WT2_GS2018 
-##              3              3              3              6 
-##  F4_WT2_GS2018  F5_WT2_GS2018  F6_WT2_GS2018  F9_WT2_GS2018 
-##              6              6              6              3 
-## G10_WT2_GS2018 G11_WT2_GS2018 G12_WT2_GS2018  G3_WT2_GS2018 
-##              3              3              3              6 
-##  G4_WT2_GS2018  G5_WT2_GS2018  G6_WT2_GS2018  G9_WT2_GS2018 
-##              6              6              6              3 
-## H10_WT2_GS2018  H3_WT2_GS2018  H4_WT2_GS2018  H9_WT2_GS2018 
-##              3              6              6              3</code></pre>
+## A10_G12_GS2018 A11_G12_GS2018 A12_G12_GS2018  A3_G12_GS2018  A4_G12_GS2018 
+##              3              3              3              6              6 
+##  A5_G12_GS2018  A6_G12_GS2018  A9_G12_GS2018 B10_G12_GS2018 B11_G12_GS2018 
+##              6              6              3              3              3 
+## B12_G12_GS2018  B3_G12_GS2018  B4_G12_GS2018  B5_G12_GS2018  B6_G12_GS2018 
+##              3              6              6              6              6 
+##  B9_G12_GS2018 C10_G12_GS2018 C11_G12_GS2018 C12_G12_GS2018  C3_G12_GS2018 
+##              3              3              3              3              6 
+##  C4_G12_GS2018  C5_G12_GS2018  C6_G12_GS2018  C9_G12_GS2018 D10_G12_GS2018 
+##              6              6              6              3              3 
+## D11_G12_GS2018 D12_G12_GS2018  D3_G12_GS2018  D4_G12_GS2018  D5_G12_GS2018 
+##              3              3              6              6              6 
+##  D6_G12_GS2018  D9_G12_GS2018 E10_WT2_GS2018 E11_WT2_GS2018 E12_WT2_GS2018 
+##              6              3              3              3              3 
+##  E3_WT2_GS2018  E4_WT2_GS2018  E5_WT2_GS2018  E6_WT2_GS2018  E9_WT2_GS2018 
+##              6              6              6              6              3 
+## F10_WT2_GS2018 F11_WT2_GS2018 F12_WT2_GS2018  F3_WT2_GS2018  F4_WT2_GS2018 
+##              3              3              3              6              6 
+##  F5_WT2_GS2018  F6_WT2_GS2018  F9_WT2_GS2018 G10_WT2_GS2018 G11_WT2_GS2018 
+##              6              6              3              3              3 
+## G12_WT2_GS2018  G3_WT2_GS2018  G4_WT2_GS2018  G5_WT2_GS2018  G6_WT2_GS2018 
+##              3              6              6              6              6 
+##  G9_WT2_GS2018 H10_WT2_GS2018  H3_WT2_GS2018  H4_WT2_GS2018  H9_WT2_GS2018 
+##              3              3              6              6              3</code></pre>
 <p>Applying to GS2018 samples:</p>
 <pre class="r"><code>GS2018_idxs &lt;- grepl(&quot;GS2018&quot;, sample_info$well_flask_ID)
 sample_info$well_flask_ID[GS2018_idxs] &lt;- sapply(sample_info$well_flask_ID[GS2018_idxs], standardizeGS2018ID)</code></pre>
@@ -741,8 +735,8 @@ sample_info |&gt;
   summarise(n_per_org_gen_tp = n()) |&gt; 
   filter((organism != &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 1) |
            (organism == &quot;hyb&quot; &amp; n_per_org_gen_tp &gt; 2)) # should be empty</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;new_id&#39;, &#39;organism&#39;, &#39;genotype&#39;. You
-## can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;new_id&#39;, &#39;organism&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre><code>## # A tibble: 383 × 5
 ## # Groups:   new_id, organism, genotype [161]
 ##    new_id     organism genotype time_point_str n_per_org_gen_tp

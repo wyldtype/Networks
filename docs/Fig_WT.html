@@ -275,11 +275,12 @@ Network between Scer and Spar</h1>
 </div>
 
 
-<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ggVennDiagram&quot;), require, character.only=TRUE)</code></pre>
+<pre class="r"><code>source(&quot;utils.R&quot;)
+sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ggVennDiagram&quot;, &quot;ggExtra&quot;, &quot;RColorBrewer&quot;), require, character.only=TRUE)</code></pre>
 <pre><code>##         dplyr         readr         tidyr         purrr       ggplot2 
 ##          TRUE          TRUE          TRUE          TRUE          TRUE 
-##        ggpubr   matrixStats ggVennDiagram 
-##          TRUE          TRUE          TRUE</code></pre>
+##        ggpubr   matrixStats ggVennDiagram       ggExtra  RColorBrewer 
+##          TRUE          TRUE          TRUE          TRUE          TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 
 TFnames &lt;- setdiff(unique(gsub(&quot;delete&quot;, &quot;&quot;, sample_info$genotype)), &quot;WT&quot;)
@@ -367,18 +368,22 @@ areOverlapingCIs &lt;- function(.CI_ref, .CI_test) {
       return(&quot;fitzwilliam&quot;) # (both, but we shouldn&#39;t ever reach this line)
     }
   }
-}
-# tests for classifyNitrogenResponse
+}</code></pre>
+<p>Re-run this code to sample random genes to see their response
+category:</p>
+<pre class="r"><code># tests for classifyNitrogenResponse
 test_org &lt;- sample(c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;), 1)
 test_gene &lt;- sample(rownames(counts), 1)
 test_expr &lt;- counts[test_gene, sample_info$organism == test_org &amp; sample_info$genotype == &quot;WT&quot;] |&gt; as.numeric()
 test_timepoints &lt;- sample_info[sample_info$organism == test_org &amp; sample_info$genotype == &quot;WT&quot;, &quot;time_point_num&quot;] |&gt; as.numeric()
 classifyNitrogenResponse(.expr_vec = test_expr,
                          .timepoint_vec = test_timepoints)</code></pre>
-<pre><code>## [1] &quot;gradual&quot;</code></pre>
+<pre><code>## [1] &quot;none&quot;</code></pre>
 <p>Plot to see if we visually agree with the test result:</p>
 <pre class="r"><code>plotGenesTFdel(.gene_idxs = test_gene, .tf = &quot;GCR2&quot;, .show_tfdel = FALSE,
                .normalization = &quot;none&quot;, .parents_or_hybrid = &quot;parents&quot;)</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_point()`).</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 <pre class="r"><code>plotGenesTFdel(.gene_idxs = test_gene, .tf = &quot;GCR2&quot;, .show_tfdel = FALSE,
                .normalization = &quot;none&quot;, .parents_or_hybrid = &quot;hybrid&quot;)</code></pre>
@@ -399,26 +404,31 @@ responsedf$response &lt;- map(c(1:nrow(responsedf)), \(i) {
                            .timepoint_vec = time_vec)
 }) |&gt; unlist()</code></pre>
 <p>How many genes in each response group?</p>
-<pre class="r"><code>ggplot(responsedf, aes(x = factor(response,
+<pre class="r"><code>p &lt;- ggplot(responsedf, aes(x = factor(response,
                                   levels = c(&quot;none&quot;, &quot;gradual&quot;, &quot;early&quot;, &quot;late&quot;, &quot;both&quot;)))) +
-  geom_histogram(aes(fill = response), stat = &quot;count&quot;) +
-  stat_count(binwidth = 1, 
-             geom = &#39;text&#39;, 
+  geom_bar(aes(fill = response), stat = &quot;count&quot;) +
+  scale_fill_discrete(limits = response_colordf$limits,
+                      type = response_colordf$value) +
+  stat_count(geom = &#39;text&#39;, 
              color = &#39;black&#39;, 
              aes(label = after_stat(count)),
-           position = position_stack(vjust = 1)) +
+           position = position_nudge(y = 200)) +
   facet_wrap(~factor(organism,
                      levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
                      labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) + 
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  xlab(&quot;response&quot;)</code></pre>
-<pre><code>## Warning in geom_histogram(aes(fill = response), stat = &quot;count&quot;): Ignoring
-## unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
-<pre><code>## Warning in stat_count(binwidth = 1, geom = &quot;text&quot;, color = &quot;black&quot;,
-## aes(label = after_stat(count)), : Ignoring unknown parameters: `binwidth`</code></pre>
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  xlab(&quot;response&quot;) +
+  ylab(&quot;number of genes&quot;) +
+  ylim(c(0, 5200))
+p</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-4-1.png" width="672" />
-What percent of genes are conserved unresponsive in all 3 groups?</p>
+For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/responseBars.pdf&quot;,
+#     width = 7, height = 3)
+# p
+# dev.off()</code></pre>
+<p>What percent of genes are conserved unresponsive in all 3 groups?</p>
 <pre class="r"><code>genedf &lt;- responsedf |&gt; 
   pivot_wider(id_cols = &quot;gene_name&quot;, 
               names_from = &quot;organism&quot;, 
@@ -458,11 +468,360 @@ sum(genedf$is_conserved_unresponsive)/nrow(genedf)</code></pre>
 <p>Numbers for 3-ring venn diagram of conserved vs diverged responsive
 genes</p>
 <pre class="r"><code>plotdf &lt;- responsedf |&gt; filter(response != &quot;none&quot;)
-ggVennDiagram(list(Scer = plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
-                   Spar = plotdf$gene_name[plotdf$organism == &quot;par&quot;],
-                   Hyb = plotdf$gene_name[plotdf$organism == &quot;hyb&quot;])) + 
-                scale_fill_gradient(low=&quot;grey90&quot;,high = &quot;red&quot;)</code></pre>
+p &lt;- ggVennDiagram(list(Scer = plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
+                        Spar = plotdf$gene_name[plotdf$organism == &quot;par&quot;],
+                        Hyb = plotdf$gene_name[plotdf$organism == &quot;hyb&quot;]))
+p + scale_fill_gradient(low = &quot;white&quot;, high = &quot;red&quot;)</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/VennWTgradient.pdf&quot;,
+    width = 3, height = 3)
+p + scale_fill_gradient(low = &quot;#E4E5E5&quot;, high = &quot;red&quot;)
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<p>Version with pseudo-colored categories for the rest of the paper:</p>
+<pre class="r"><code>p$layers[[1]]$mapping &lt;- aes(fill = name)
+p &lt;- p + scale_fill_manual(values = c(
+  &quot;Scer&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+  &quot;Spar&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+  &quot;Hyb&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;],
+  &quot;Scer/Hyb&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;ScerHyb&quot;],
+  &quot;Spar/Hyb&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;SparHyb&quot;],
+  &quot;Scer/Spar&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;ScerSpar&quot;],
+  &quot;Scer/Spar/Hyb&quot; = conservation_colordf$value[conservation_colordf$limits == &quot;conserved&quot;]))
+
+p</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-10-1.png" width="672" />
+For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/VennWT.pdf&quot;,
+#     width = 4, height = 4)
+# p + theme(legend.position = &quot;left&quot;)
+# dev.off()</code></pre>
+<p>Is the distribution of the conserved responsive genes the same
+breakdown as per genetic background?</p>
+<pre class="r"><code>genedf$conservation &lt;- map(c(1:nrow(genedf)), \(i) {
+  if (genedf$cer[i] != &quot;none&quot; &amp; genedf$par[i] != &quot;none&quot; &amp; genedf$hyb[i] != &quot;none&quot;) {
+    return(&quot;conserved&quot;)
+  }
+  if (genedf$cer[i] != &quot;none&quot; &amp; genedf$par[i] == &quot;none&quot; &amp; genedf$hyb[i] == &quot;none&quot;) {
+    return(&quot;Scer&quot;)
+  }
+  if (genedf$cer[i] == &quot;none&quot; &amp; genedf$par[i] != &quot;none&quot; &amp; genedf$hyb[i] == &quot;none&quot;) {
+    return(&quot;Spar&quot;)
+  }
+  if (genedf$cer[i] == &quot;none&quot; &amp; genedf$par[i] == &quot;none&quot; &amp; genedf$hyb[i] != &quot;none&quot;) {
+    return(&quot;Hyb&quot;)
+  }
+  if (genedf$cer[i] != &quot;none&quot; &amp; genedf$par[i] == &quot;none&quot; &amp; genedf$hyb[i] != &quot;none&quot;) {
+    return(&quot;ScerHyb&quot;)
+  }
+  if (genedf$cer[i] == &quot;none&quot; &amp; genedf$par[i] != &quot;none&quot; &amp; genedf$hyb[i] != &quot;none&quot;) {
+    return(&quot;SparHyb&quot;)
+  }
+  if (genedf$cer[i] != &quot;none&quot; &amp; genedf$par[i] != &quot;none&quot; &amp; genedf$hyb[i] == &quot;none&quot;) {
+    return(&quot;ScerSpar&quot;)
+  }
+  if (genedf$cer[i] == &quot;none&quot; &amp; genedf$par[i] == &quot;none&quot; &amp; genedf$hyb[i] == &quot;none&quot;) {
+    return(&quot;unresponsive&quot;)
+  }
+}) |&gt; unlist()
+conserved_responsive_idxs &lt;- filter(genedf, conservation == &quot;conserved&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+plotdf &lt;- filter(responsedf, gene_name %in% conserved_responsive_idxs)
+p &lt;- ggplot(plotdf, aes(x = factor(response,
+                                  levels = c(&quot;none&quot;, &quot;gradual&quot;, &quot;early&quot;, &quot;late&quot;, &quot;both&quot;)))) +
+  geom_bar(aes(fill = response), stat = &quot;count&quot;) +
+  scale_fill_discrete(limits = response_colordf$limits,
+                      type = response_colordf$value) +
+  stat_count(geom = &#39;text&#39;, 
+             color = &#39;black&#39;,
+             size = 3,
+             aes(label = after_stat(count)),
+           position = position_nudge(y = 25)) +
+  facet_wrap(~factor(organism,
+                     levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) + 
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position = &quot;none&quot;) +
+  xlab(&quot;response&quot;) +
+  ylab(&quot;number of genes&quot;) +
+  ggtitle(paste(length(conserved_responsive_idxs), &quot;conserved responsive genes&quot;)) +
+  ylim(c(0, 350))
+p</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-11-1.png" width="672" />
+Same breakdown—Scer has most Early, Spar has most late, Hyb in the
+middle.</p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/consResponsiveBars.pdf&quot;,
+#     width = 3.5, height = 3.4)
+# p
+# dev.off()</code></pre>
+<div id="gene-ontology" class="section level3">
+<h3>Gene Ontology</h3>
+<p>Are the conserved responsive genes more likely to be nitrogen-related
+than the non-conserved?</p>
+<pre class="r"><code># conserved responsive
+conserved_GOdf &lt;- getGOSlimDf(.idxs = conserved_responsive_idxs,
+                              .group_name = &quot;conserved&quot;)
+
+# Scer-only responsive
+Scer_responsive_idxs &lt;- filter(genedf, conservation == &quot;Scer&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+Scer_GOdf &lt;- getGOSlimDf(.idxs = Scer_responsive_idxs,
+                         .group_name = &quot;Scer&quot;)
+
+# Spar-only responsive
+Spar_responsive_idxs &lt;- filter(genedf, conservation == &quot;Spar&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+Spar_GOdf &lt;- getGOSlimDf(.idxs = Spar_responsive_idxs,
+                         .group_name = &quot;Spar&quot;)
+
+# Hyb-only responsive
+Hyb_responsive_idxs &lt;- filter(genedf, conservation == &quot;Hyb&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+Hyb_GOdf &lt;- getGOSlimDf(.idxs = Hyb_responsive_idxs,
+                        .group_name = &quot;Hyb&quot;)
+
+# Scer-Hyb responsive
+ScerHyb_responsive_idxs &lt;- filter(genedf, conservation == &quot;ScerHyb&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+ScerHyb_GOdf &lt;- getGOSlimDf(.idxs = ScerHyb_responsive_idxs,
+                            .group_name = &quot;ScerHyb&quot;)
+
+# Spar-Hyb responsive
+SparHyb_responsive_idxs &lt;- filter(genedf, conservation == &quot;SparHyb&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+SparHyb_GOdf &lt;- getGOSlimDf(.idxs = SparHyb_responsive_idxs,
+                            .group_name = &quot;SparHyb&quot;)
+
+# Scer-Spar responsive
+ScerSpar_responsive_idxs &lt;- filter(genedf, conservation == &quot;ScerSpar&quot;) |&gt; 
+  select(gene_name) |&gt; pull()
+ScerSpar_GOdf &lt;- getGOSlimDf(.idxs = ScerSpar_responsive_idxs,
+                            .group_name = &quot;ScerSpar&quot;)
+
+# (too many genes are conserved unresponsive to do an enrichment,
+# it&#39;s like doing a GO enrichment on the whole genome)
+
+# Lastly, what are those 8 Scer-Spar genes? There&#39;s only 8 of them
+filter(genedf, cer != &quot;none&quot; &amp; 
+         par != &quot;none&quot; &amp; 
+         hyb == &quot;none&quot;) |&gt; 
+  select(gene_name) |&gt; pull()</code></pre>
+<pre><code>## [1] &quot;YCL064C&quot; &quot;YDL059C&quot; &quot;YDR011W&quot; &quot;YER057C&quot; &quot;YER064C&quot; &quot;YGR060W&quot; &quot;YML034W&quot;
+## [8] &quot;YMR252C&quot;</code></pre>
+<p>YCL064C = CHA1, YDL059C = RAD59, YDR011W = SNQ2, YER057C = HMF1,
+YER064C = VHR2, YGR060W = ERG25, YML034W = SRC1, YMR252C = MLO1</p>
+<p>No obvious connections, CHA1 is the only nitrogen catabolism one,
+RAD59 works with RAD52 on coating DSBs</p>
+<p>What are biggest differences in GO enrichment between these
+groups?</p>
+<pre class="r"><code># ensures that genes aren&#39;t double-counted for being associated with multiple GO terms
+getCombinedTermGenes &lt;- function(.df, .term_vec) {
+  .df |&gt; filter(term %in% .term_vec) |&gt; 
+    select(genes) |&gt; pull() |&gt; map(.f = strsplit, split = &quot; &quot;) |&gt; 
+    unlist() |&gt; unique()
+}
+# same as above but only shows genes with sig term (any term)
+getSigTermGenes &lt;- function(.df) {
+  .term_vec &lt;- .df |&gt; filter(sig) |&gt; 
+    select(term) |&gt; pull() |&gt; unique()
+  .df |&gt; filter(term %in% .term_vec) |&gt; 
+    select(genes) |&gt; pull() |&gt; map(.f = strsplit, split = &quot; &quot;) |&gt; 
+    unlist() |&gt; unique()
+}
+
+# How many terms are in each conservation category and how many genes 
+# are part of at least one sig GO term in each conservation category?
+GOdfs &lt;- list(conserved = conserved_GOdf, 
+              Scer = Scer_GOdf,
+              Spar = Spar_GOdf, 
+              Hyb = Hyb_GOdf, 
+              ScerHyb = ScerHyb_GOdf,
+              SparHyb = SparHyb_GOdf,
+              ScerSpar = ScerSpar_GOdf)
+plotdf &lt;- tibble(category = names(GOdfs))
+plotdf$nTerms &lt;- map(plotdf$category, \(nm) {
+  GOdfs[[nm]] |&gt; filter(sig) |&gt; nrow()
+}) |&gt; unlist()
+plotdf$nSigGenes &lt;- map(plotdf$category, \(nm) {
+  getSigTermGenes(.df = GOdfs[[nm]]) |&gt; 
+    length()
+}) |&gt; unlist()
+plotdf$nGenes &lt;- c(length(conserved_responsive_idxs),
+                   length(Scer_responsive_idxs),
+                   length(Spar_responsive_idxs),
+                   length(Hyb_responsive_idxs),
+                   length(ScerHyb_responsive_idxs),
+                   length(SparHyb_responsive_idxs),
+                   length(ScerSpar_responsive_idxs))
+plotdf</code></pre>
+<pre><code>## # A tibble: 7 × 4
+##   category  nTerms nSigGenes nGenes
+##   &lt;chr&gt;      &lt;int&gt;     &lt;int&gt;  &lt;int&gt;
+## 1 conserved     25       282    396
+## 2 Scer           2        63    131
+## 3 Spar           3        14     58
+## 4 Hyb           10        97    230
+## 5 ScerHyb       17       143    287
+## 6 SparHyb        2        33    128
+## 7 ScerSpar       0         0      8</code></pre>
+<pre class="r"><code>plotdf$category &lt;- factor(plotdf$category, 
+                          levels = c(&quot;conserved&quot;, &quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;, 
+                                     &quot;ScerHyb&quot;, &quot;SparHyb&quot;, &quot;ScerSpar&quot;))
+p &lt;- ggplot(plotdf, aes(x = category, y = nTerms)) + 
+  geom_bar(aes(fill = category),
+           stat = &quot;identity&quot;) +
+  geom_text(aes(y = nTerms, label = paste0(nSigGenes, &quot;/&quot;, nGenes, &quot;\n=&quot;, round(nSigGenes/nGenes, digits = 2)*100, &quot;%&quot;)), nudge_y = 2.5) +
+  scale_fill_discrete(type = conservation_colordf$value,
+                      limits = conservation_colordf$limits) +
+  scale_y_discrete(name = &quot;conservation&quot;) +
+  theme_classic() +
+  ylim(c(0, 30)) +
+  ylab(&quot;number of significant GO terms\n(Fisher&#39;s Exact p-value &lt; 0.001)&quot;)</code></pre>
+<pre><code>## Scale for y is already present.
+## Adding another scale for y, which will replace the existing scale.</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="Fig_WT_files/figure-html/plot%20GOtermBars-1.png" width="672" /></p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/GOtermBars.pdf&quot;,
+#     width = 6, height = 3)
+# p
+# dev.off()</code></pre>
+<p>How many conserved GO terms are not ribosome related?</p>
+<pre class="r"><code>term_ribosome &lt;- c(&quot;90S preribosome&quot;,
+                   &quot;cytosolic large ribosomal subunit&quot;,
+                   &quot;cytosolic small ribosomal subunit&quot;,
+                   &quot;cytosolic ribosome&quot;,
+                   &quot;large ribosomal subunit&quot;,
+                   &quot;preribosome&quot;,
+                   &quot;preribosome large subunit precursor&quot;,
+                   &quot;ribonucleoprotein complex&quot;,
+                   &quot;ribosome biogenesis&quot;,
+                   &quot;ribosomal large subunit biogenesis&quot;,
+                   &quot;ribosomal subunit export from nucleus&quot;,
+                   &quot;rRNA processing&quot;,
+                   &quot;protein-RNA complex assembly&quot;,
+                   &quot;sno(s)RNA-containing ribonucleoprotein complex&quot;,
+                   &quot;rRNA binding&quot;,
+                   &quot;small ribosomal subunit&quot;,
+                   &quot;structural constituent of ribosome&quot;,
+                   &quot;preribosome small subunit precursor&quot;,
+                   &quot;Pwp2p-containing subcomplex of 90S preribosome&quot;,
+                   &quot;small-subunit processome&quot;,
+                   &quot;t-UTP complex&quot;,
+                   &quot;preribosome, large subunit precursor&quot;)
+
+# conserved
+conserved_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt; 
+  select(term, group_count, overall_count, exact_pval) |&gt;
+  mutate(exact_pval = formatC(exact_pval)) |&gt; 
+  xtable::xtable(digits = 0)</code></pre>
+<pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
+## % Sat Jul 26 08:09:59 2025
+## \begin{table}[ht]
+## \centering
+## \begin{tabular}{rlrrl}
+##   \hline
+##  &amp; term &amp; group\_count &amp; overall\_count &amp; exact\_pval \\ 
+##   \hline
+## 1 &amp; amino acid metabolic process &amp; 43 &amp; 174 &amp; 5.74e-13 \\ 
+##   2 &amp; amino acid transport &amp; 17 &amp; 43 &amp; 3.083e-09 \\ 
+##   3 &amp; biosynthetic process &amp; 144 &amp; 1011 &amp; 1.181e-16 \\ 
+##   4 &amp; carbohydrate metabolic process &amp; 19 &amp; 117 &amp; 0.0008668 \\ 
+##   5 &amp; cytoplasmic translation &amp; 56 &amp; 97 &amp; 4.808e-39 \\ 
+##   6 &amp; eisosome &amp; 7 &amp; 21 &amp; 0.0005381 \\ 
+##   7 &amp; oligosaccharide metabolic process &amp; 6 &amp; 17 &amp; 0.0009671 \\ 
+##   8 &amp; oxidoreductase activity &amp; 53 &amp; 287 &amp; 2.218e-10 \\ 
+##   9 &amp; small molecule metabolic process &amp; 89 &amp; 581 &amp; 6.317e-12 \\ 
+##   10 &amp; structural molecule activity &amp; 69 &amp; 268 &amp; 2.026e-21 \\ 
+##   11 &amp; sulfur compound metabolic process &amp; 17 &amp; 87 &amp; 0.000172 \\ 
+##   12 &amp; translation &amp; 56 &amp; 194 &amp; 4.939e-20 \\ 
+##   13 &amp; transmembrane transporter activity &amp; 43 &amp; 312 &amp; 4.394e-05 \\ 
+##   14 &amp; vacuole &amp; 36 &amp; 254 &amp; 0.0001036 \\ 
+##    \hline
+## \end{tabular}
+## \end{table}</code></pre>
+<pre class="r"><code># Scer-Hyb
+ScerHyb_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt; 
+  select(term, group_count, overall_count, exact_pval) |&gt;
+  mutate(exact_pval = formatC(exact_pval)) |&gt; 
+  xtable::xtable(digits = 0)</code></pre>
+<pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
+## % Sat Jul 26 08:09:59 2025
+## \begin{table}[ht]
+## \centering
+## \begin{tabular}{rlrrl}
+##   \hline
+##  &amp; term &amp; group\_count &amp; overall\_count &amp; exact\_pval \\ 
+##   \hline
+## 1 &amp; cellular respiration &amp; 13 &amp; 59 &amp; 1.018e-05 \\ 
+##   2 &amp; cytoplasmic stress granule &amp; 16 &amp; 94 &amp; 3.22e-05 \\ 
+##   3 &amp; cytoplasmic translation &amp; 21 &amp; 97 &amp; 2.585e-08 \\ 
+##   4 &amp; generation of precursor metabolites and energy &amp; 23 &amp; 118 &amp; 4.528e-08 \\ 
+##   5 &amp; mitochondrial respiratory chain complex III &amp; 7 &amp; 9 &amp; 3.898e-08 \\ 
+##   6 &amp; mitochondrial respiratory chain complex IV &amp; 5 &amp; 10 &amp; 8.624e-05 \\ 
+##   7 &amp; multi-eIF complex &amp; 5 &amp; 10 &amp; 8.624e-05 \\ 
+##   8 &amp; nucleolus &amp; 25 &amp; 225 &amp; 0.0003823 \\ 
+##   9 &amp; response to starvation &amp; 7 &amp; 28 &amp; 0.0005291 \\ 
+##   10 &amp; RNA polymerase I complex &amp; 5 &amp; 14 &amp; 0.0005732 \\ 
+##   11 &amp; small molecule metabolic process &amp; 49 &amp; 581 &amp; 0.0008408 \\ 
+##    \hline
+## \end{tabular}
+## \end{table}</code></pre>
+<pre class="r"><code># Hyb
+Hyb_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt; 
+  select(term, group_count, overall_count, exact_pval) |&gt;
+  mutate(exact_pval = formatC(exact_pval)) |&gt; 
+  xtable::xtable(digits = 0)</code></pre>
+<pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
+## % Sat Jul 26 08:09:59 2025
+## \begin{table}[ht]
+## \centering
+## \begin{tabular}{rlrrl}
+##   \hline
+##  &amp; term &amp; group\_count &amp; overall\_count &amp; exact\_pval \\ 
+##   \hline
+## 1 &amp; generation of precursor metabolites and energy &amp; 16 &amp; 118 &amp; 3.796e-05 \\ 
+##   2 &amp; nucleobase-containing small molecule metabolic process &amp; 19 &amp; 176 &amp; 0.0001753 \\ 
+##   3 &amp; nucleolus &amp; 28 &amp; 225 &amp; 2.711e-07 \\ 
+##   4 &amp; oxidoreductase activity &amp; 25 &amp; 287 &amp; 0.0005341 \\ 
+##   5 &amp; small molecule metabolic process &amp; 43 &amp; 581 &amp; 0.0002391 \\ 
+##    \hline
+## \end{tabular}
+## \end{table}</code></pre>
+<p>How many genes are associated with a ribosome related term and
+therefore excluded from each of the two above tables (to report by word
+in the paper)?</p>
+<pre class="r"><code># conserved
+cat(&quot;conserved nTerms:&quot;)</code></pre>
+<pre><code>## conserved nTerms:</code></pre>
+<pre class="r"><code>conserved_GOdf |&gt; filter(term %in% term_ribosome) |&gt; nrow()</code></pre>
+<pre><code>## [1] 15</code></pre>
+<pre class="r"><code>cat(&quot;conserved nGenes:&quot;)</code></pre>
+<pre><code>## conserved nGenes:</code></pre>
+<pre class="r"><code>getCombinedTermGenes(conserved_GOdf, term_ribosome) |&gt; length()</code></pre>
+<pre><code>## [1] 91</code></pre>
+<pre class="r"><code># Scer-Hyb
+cat(&quot;Scer-Hyb nTerms:&quot;)</code></pre>
+<pre><code>## Scer-Hyb nTerms:</code></pre>
+<pre class="r"><code>ScerHyb_GOdf |&gt; filter(term %in% term_ribosome) |&gt; nrow()</code></pre>
+<pre><code>## [1] 14</code></pre>
+<pre class="r"><code>cat(&quot;Scer-Hyb nGenes:&quot;)</code></pre>
+<pre><code>## Scer-Hyb nGenes:</code></pre>
+<pre class="r"><code>getCombinedTermGenes(ScerHyb_GOdf, term_ribosome) |&gt; length()</code></pre>
+<pre><code>## [1] 54</code></pre>
+<pre class="r"><code># Hyb
+cat(&quot;Hyb nTerms:&quot;)</code></pre>
+<pre><code>## Hyb nTerms:</code></pre>
+<pre class="r"><code>Hyb_GOdf |&gt; filter(term %in% term_ribosome) |&gt; nrow()</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre class="r"><code>cat(&quot;Hyb nGenes:&quot;)</code></pre>
+<pre><code>## Hyb nGenes:</code></pre>
+<pre class="r"><code>getCombinedTermGenes(Hyb_GOdf, term_ribosome) |&gt; length()</code></pre>
+<pre><code>## [1] 35</code></pre>
+</div>
 </div>
 <div id="ortholog-correlations" class="section level2">
 <h2>Ortholog correlations</h2>
@@ -506,13 +865,88 @@ Spar-hyb (cor(Spar, Hyb)).</p>
 # tests for getOrthoCor
 getOrthoCor(.g = &quot;YGR192C&quot;,
             .org1 = &quot;cer&quot;, .al1 = &quot;cer&quot;,
-            .org2 = &quot;par&quot;, .al2 = &quot;par&quot;)</code></pre>
-<pre><code>## [1] 0.2430612</code></pre>
+            .org2 = &quot;hyb&quot;, .al2 = &quot;hyb&quot;)</code></pre>
+<pre><code>## [1] 0.1981743</code></pre>
 <p>Plot to see if we visually agree with the test result:</p>
-<pre class="r"><code>plotGenesTFdel(.gene_idxs = &quot;YGR192C&quot;, .tf = &quot;GCR2&quot;, .show_tfdel = FALSE,
-               .normalization = &quot;none&quot;, .parents_or_hybrid = &quot;parents&quot;)</code></pre>
-<p><img src="Fig_WT_files/figure-html/unnamed-chunk-10-1.png" width="672" />
-Calculating ortholog correlations:</p>
+<pre class="r"><code>plotExpressionProfileTFdel(.cts1 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;cer&quot; &amp;
+                                            sample_info$genotype == &quot;WT&quot;, 
+                                          drop = FALSE],
+                           .cts2 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;hyb&quot; &amp;
+                                            sample_info$allele == &quot;hyb&quot; &amp;
+                                            sample_info$genotype == &quot;WT&quot;, 
+                                          drop = FALSE],
+                           .cts3 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;cer&quot; &amp;
+                                            sample_info$genotype == &quot;GCR2delete&quot;, 
+                                          drop = FALSE],
+                           .cts4 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;hyb&quot; &amp;
+                                            sample_info$allele == &quot;hyb&quot; &amp;
+                                            sample_info$genotype == &quot;GCR2delete&quot;, 
+                                          drop = FALSE],
+                           .info1 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,],
+                           .info2 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                  sample_info$allele == &quot;hyb&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,],
+                           .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp;
+                                                  sample_info$genotype == &quot;GCR2delete&quot;,],
+                           .info4 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                  sample_info$allele == &quot;hyb&quot; &amp;
+                                                  sample_info$genotype == &quot;GCR2delete&quot;,],
+                           .show_tfdel = FALSE,
+                           .normalization = &quot;log2&quot;)</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-17-1.png" width="672" />
+Hyb, however, has much stronger cor with Spar:</p>
+<pre class="r"><code>getOrthoCor(.g = &quot;YGR192C&quot;,
+            .org1 = &quot;par&quot;, .al1 = &quot;par&quot;,
+            .org2 = &quot;hyb&quot;, .al2 = &quot;hyb&quot;)</code></pre>
+<pre><code>## [1] 0.998941</code></pre>
+<p>Plot to confirm this:</p>
+<pre class="r"><code>plotExpressionProfileTFdel(.cts1 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;par&quot; &amp;
+                                            sample_info$genotype == &quot;WT&quot;, 
+                                          drop = FALSE],
+                           .cts2 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;hyb&quot; &amp;
+                                            sample_info$allele == &quot;hyb&quot; &amp;
+                                            sample_info$genotype == &quot;WT&quot;, 
+                                          drop = FALSE],
+                           .cts3 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;par&quot; &amp;
+                                            sample_info$genotype == &quot;GCR2delete&quot;, 
+                                          drop = FALSE],
+                           .cts4 = counts[&quot;YGR192C&quot;, 
+                                          sample_info$organism == &quot;hyb&quot; &amp;
+                                            sample_info$allele == &quot;hyb&quot; &amp;
+                                            sample_info$genotype == &quot;GCR2delete&quot;, 
+                                          drop = FALSE],
+                           .info1 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,],
+                           .info2 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                  sample_info$allele == &quot;hyb&quot; &amp;
+                                                  sample_info$genotype == &quot;WT&quot;,],
+                           .info3 = sample_info[sample_info$organism == &quot;par&quot; &amp;
+                                                  sample_info$genotype == &quot;GCR2delete&quot;,],
+                           .info4 = sample_info[sample_info$organism == &quot;hyb&quot; &amp;
+                                                  sample_info$allele == &quot;hyb&quot; &amp;
+                                                  sample_info$genotype == &quot;GCR2delete&quot;,],
+                           .show_tfdel = FALSE,
+                           .normalization = &quot;log2&quot;)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<p>Calculating ortholog correlations:</p>
 <pre class="r"><code># cor(Scer, Spar)
 genedf$cor_parents &lt;- map(genedf$gene_name, 
                           .f = getOrthoCor, 
@@ -541,17 +975,23 @@ genedf$cor_par &lt;- map(genedf$gene_name,
 correlation in the hybrid</p>
 <pre class="r"><code>cor_thresh &lt;- 0.5
 # parents
-plotdf &lt;- genedf |&gt; drop_na() |&gt; 
-  filter(!is_conserved_unresponsive)
+plotdf &lt;- genedf |&gt; drop_na()
 ggplot(plotdf, aes(x = cor_parents)) +
   geom_density() +
   geom_vline(xintercept = cor_thresh) +
   xlab(&quot;parental correlation between\n orthologs (cor(Scer, Spar))&quot;) +
   theme_classic()</code></pre>
-<p><img src="Fig_WT_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p><img src="Fig_WT_files/figure-html/density-1.png" width="672" /></p>
+<pre class="r"><code># hybrid
+plotdf &lt;- genedf |&gt; drop_na()
+ggplot(plotdf, aes(x = cor_hybrid)) +
+  geom_density() +
+  geom_vline(xintercept = cor_thresh) +
+  xlab(&quot;parental correlation between\n orthologs (cor(Scer, Spar))&quot;) +
+  theme_classic()</code></pre>
+<p><img src="Fig_WT_files/figure-html/density-2.png" width="672" /></p>
 <pre class="r"><code>plotdf &lt;- genedf |&gt; drop_na() |&gt; 
-  filter(cor_parents &lt; cor_thresh &amp;
-           !is_conserved_unresponsive) |&gt; 
+  filter(cor_parents &lt; cor_thresh) |&gt; 
   pivot_longer(cols = c(&quot;cor_hybrid&quot;,
                         &quot;cor_parents&quot;),
                names_to = &quot;parent_or_hybrid&quot;,
@@ -566,15 +1006,16 @@ ggplot(plotdf, aes(x = cor)) +
   xlab(&quot;correlation for genes \nwith low parental correlation&quot;) +
   theme_classic() +
   theme(legend.title = element_blank())</code></pre>
-<p><img src="Fig_WT_files/figure-html/unnamed-chunk-12-2.png" width="672" />
+<p><img src="Fig_WT_files/figure-html/density-3.png" width="672" />
 Furthermore these genes tend to correlate with one or the other parent’s
 expression:</p>
-<pre class="r"><code>sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD_features.tab&quot;, delim = &quot;\t&quot;, col_names = FALSE) |&gt; filter(X2 == &quot;ORF&quot;) |&gt; 
+<pre class="r"><code># SGD lookup to name outlier genes with common name
+sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD_features.tab&quot;, delim = &quot;\t&quot;, col_names = FALSE) |&gt; filter(X2 == &quot;ORF&quot;) |&gt; 
   select(X4, X5) |&gt; 
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ──────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13
@@ -583,25 +1024,73 @@ expression:</p>
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre class="r"><code>plotdf &lt;- genedf |&gt; drop_na() |&gt; 
-  filter(cor_parents &lt; cor_thresh &amp;
-           !is_conserved_unresponsive) |&gt; 
-  mutate(conserved_btwn_species = cer == par) |&gt; 
+  filter(!is_conserved_unresponsive) |&gt; 
+  #mutate(conserved_btwn_species = cer == par) |&gt; 
   left_join(y = sgd_lookup, by = &quot;gene_name&quot;)
-ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
-  geom_point() +
+p &lt;- ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
+  geom_point(aes(color = conservation)) +
+  scale_color_discrete(limits = conservation_colordf$limits,
+                       type = conservation_colordf$value) +
   geom_vline(xintercept = 0.8, color = &quot;red&quot;) +
   geom_hline(yintercept = 0.8, color = &quot;red&quot;) +
   geom_text(data = filter(plotdf, cor_cer &lt; 0.7 &amp;
                             cor_par &lt; 0.7),
-            aes(label = common_name, x = cor_cer,
+            aes(label = if_else(!is.na(common_name), 
+                                true = common_name,
+                                false = gene_name), x = cor_cer,
                 y = cor_par),
-            nudge_y = -0.1) +
-  theme_classic() +
+            nudge_y = -0.1, size = 3) +
+  theme_classic() + 
+  theme(legend.position = &quot;left&quot;) +
   xlab(&quot;correlation (Scer, Hyb)&quot;) +
-  ylab(&quot;correlation (Spar, Hyb)&quot;)</code></pre>
-<p><img src="Fig_WT_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+  ylab(&quot;correlation (Spar, Hyb)&quot;)
+ggMarginal(p, type = &quot;densigram&quot;, margins = &quot;both&quot;)</code></pre>
+<pre><code>## Warning: The dot-dot notation (`..density..`) was deprecated in ggplot2 3.4.0.
+## ℹ Please use `after_stat(density)` instead.
+## ℹ The deprecated feature was likely used in the ggExtra package.
+##   Please report the issue at &lt;https://github.com/daattali/ggExtra/issues&gt;.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/HybridDominance.pdf&quot;,
+#     width = 6, height = 4)
+# grid::grid.draw(ggMarginal(p, type = &quot;histogram&quot;))
+# dev.off()</code></pre>
+<p>2D Density plot including unresponsive genes (but excluding genes
+correlated with both parents)</p>
+<pre class="r"><code>plotdf &lt;- genedf |&gt; drop_na() |&gt;
+  left_join(y = sgd_lookup, by = &quot;gene_name&quot;) |&gt;
+  filter(cor_cer &lt; 0.8 | cor_par &lt; 0.8)
+p &lt;- ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
+  stat_density_2d(aes(fill = log(..density.. + 1)), geom = &quot;raster&quot;, contour = FALSE) +
+  geom_point(data = filter(plotdf, conservation == &quot;unresponsive&quot;), aes(color = conservation), size = 0.5) +
+  geom_point(data = filter(plotdf, conservation != &quot;unresponsive&quot;), aes(color = conservation), size = 0.5) +
+  geom_vline(xintercept = 0.8, color = &quot;red&quot;) +
+  geom_hline(yintercept = 0.8, color = &quot;red&quot;) +
+  theme_classic() + 
+  theme(legend.position = &quot;none&quot;) +
+  xlab(&quot;correlation (Scer, Hyb)&quot;) +
+  ylab(&quot;correlation (Spar, Hyb)&quot;) +
+  scale_fill_distiller(palette = &quot;Spectral&quot;) +
+  scale_color_discrete(limits = conservation_colordf$limits,
+                       type = conservation_colordf$value)
+ggMarginal(p, type = &quot;histogram&quot;)</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-22-1.png" width="672" />
+For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/HybridDominanceAllGenes.pdf&quot;,
+#     width = 6, height = 6)
+# grid::grid.draw(ggMarginal(p, type = &quot;histogram&quot;))
+# dev.off()</code></pre>
 <pre class="r"><code>save(genedf, file = &quot;data_files/GeneDataFrame.RData&quot;)</code></pre>
-<pre class="r"><code># TODO: adapt to use TFdeldf if needed
+</div>
+<div id="full-go-term-latex-tables-for-supplement"
+class="section level1">
+<h1>Full GO term Latex tables for supplement</h1>
+<pre class="r"><code># heatmap of TF lfcs between species
+# Probably Not necessary b/c in just LowN environment, you can just do an xy scatterplot of TF expression level in Scer vs Spar across timepoints, but keeping just in case
+# TODO: adapt to use TFdeldf if needed
 # 
 # TFdf &lt;- TFdeldf |&gt; select(gene_name, deletion, timepoint, organism, lfc, padj) |&gt;
 #   pivot_wider(id_cols = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;timepoint&quot;),

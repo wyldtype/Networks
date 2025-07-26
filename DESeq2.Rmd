@@ -294,7 +294,7 @@ sum(TFdeldf_sham2$padj >= p_thresh)
 ## Saving
 
 ```{r}
-save(TFdeldf, file = "data_files/DESeq2.RData")
-# save(TFdeldf, TFdeldf_sham1, TFdeldf_sham2, file = "data_files/DESeq2.RData")
+# save(TFdeldf, file = "data_files/DESeq2.RData")
+save(TFdeldf, TFdeldf_sham1, TFdeldf_sham2, file = "data_files/DESeq2.RData")
 ```
 

@@ -17,10 +17,10 @@ plotExpressionProfileTFdel <- function(.cts1, .cts2, .cts3, .cts4,
                                        .name2 = "S. paradoxus WT",
                                        .name3 = "S. cerevisiae TFdel",
                                        .name4 = "S. paradoxus TFdel",
-                                       .color1 = "orange1",
-                                       .color2 = "blue2",
-                                       .color3 = "orange4",
-                                       .color4 = "blue4",
+                                       .color1 = "#F15F5B",
+                                       .color2 = "#47AA48",
+                                       .color3 = "#F15F5B",
+                                       .color4 = "#47AA48",
                                        .normalization = c("none", "log2", "scale", "centered log2"),
                                        .show_points_wt = TRUE,
                                        .show_points_tfdel = TRUE,
@@ -129,7 +129,7 @@ plotExpressionProfileTFdel <- function(.cts1, .cts2, .cts3, .cts4,
   if (.show_points_wt & .show_wt) {
     p <- p + geom_jitter(data = filter(plotdf, genotype == "WT"),
                          aes(x = time_point_str, y = expr, color = group_id), 
-                         size = 0.1, alpha = 0.5, shape = ".") 
+                         size = 0.3, alpha = 1, shape = ".") 
   }
   if (.show_lines_wt & .show_wt) {
     # lines trace average expr at each timepoint/experiment for each group
@@ -575,6 +575,42 @@ makeUpsetPlot <- function(.df, .group_name, .group_members, .item_names,
 # makeUpsetPlot(.df = effectdf,
 #               .group_name = "organism",
 #               .group_members = c("cer", "par", "hyc", "hyp"),
-#               .item_names = c("gene_name", "deletion", "effect"))s
+#               .item_names = c("gene_name", "deletion", "effect"))
+
+#### Gene Ontology Enrichment ####
+getGOSlimDf <- function(.idxs, .group_name, .file_prefix = "gene_ontology/results/",
+                        .min_hits = 5) {
+  test_table <- goslim |> filter(ORF %in% .idxs) |> select(GOslim_term) |> table()
+  test_table <- test_table[test_table >= .min_hits]
+  testdf <- tibble("term" = names(test_table),
+                   "group_count" = as.numeric(test_table))
+  testdf$overall_count <- map(testdf$term, \(x) {
+    ct <- goslim |> filter(GOslim_term == x) |> select(ORF) |> 
+      pull() |> unique() |> length()
+    return(ct)
+  }) |> unlist()
+  testdf$exact_pval <- map2(testdf$group_count, testdf$overall_count, \(x, y) {
+    n_mod <- length(.idxs)
+    n_genes <- length(unique(finaldf$gene_name))
+    exact_table <- rbind(c(x, n_mod - x), c(y - x, n_genes - n_mod - y))
+    exact_result <- fisher.test(exact_table, alternative = "greater")
+    return(exact_result$p.value)
+  }) |> unlist()
+  testdf$sig <- testdf$exact_pval < 0.001
+  testdf$genes <- map(testdf$term, \(x) {
+    termgenes <- goslim |> filter(ORF %in% .idxs & GOslim_term == x) |> 
+      select(ORF) |> pull() |> unique()
+    return(reduce(termgenes, paste, sep = " "))
+  }) |> unlist()
+  
+  write_csv(arrange(testdf, exact_pval, desc(group_count)), 
+            file = paste0(.file_prefix, .group_name, ".csv"),
+            quote = "none", 
+            col_names = TRUE)
+  return(testdf)
+}
+# tests for getGOSlimDf
+# test <- getGOSlimDf(.idxs = c("YGR192C", "YJR009C", "YJL052W"),
+#                     .group_name = "tdhs", .min_hits = 1)
 ```
 

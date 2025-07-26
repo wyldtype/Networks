@@ -274,23 +274,24 @@ $(document).ready(function () {
 </div>
 
 
-<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ComplexHeatmap&quot;, &quot;circlize&quot;, &quot;ggVennDiagram&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##          dplyr          readr          tidyr          purrr 
-##           TRUE           TRUE           TRUE           TRUE 
-##        ggplot2         ggpubr    matrixStats ComplexHeatmap 
-##           TRUE           TRUE           TRUE           TRUE 
-##       circlize  ggVennDiagram 
-##           TRUE           TRUE</code></pre>
+<pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ComplexHeatmap&quot;, &quot;circlize&quot;, &quot;ggVennDiagram&quot;, &quot;ggExtra&quot;), require, character.only=TRUE)</code></pre>
+<pre><code>##          dplyr          readr          tidyr          purrr        ggplot2 
+##           TRUE           TRUE           TRUE           TRUE           TRUE 
+##         ggpubr    matrixStats ComplexHeatmap       circlize  ggVennDiagram 
+##           TRUE           TRUE           TRUE           TRUE           TRUE 
+##        ggExtra 
+##           TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 load(&quot;data_files/DESeq2.RData&quot;)
 load(&quot;data_files/GeneDataFrame.RData&quot;)
+source(&quot;utils.R&quot;)
 
 sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD_features.tab&quot;, delim = &quot;\t&quot;, col_names = FALSE) |&gt; filter(X2 == &quot;ORF&quot;) |&gt; 
   select(X4, X5) |&gt; 
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ──────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13
@@ -307,7 +308,7 @@ p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
 eff_thresh &lt;- 1
 TFdel_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/yeastract_46TFs.csv&quot;, col_names = FALSE, col_select = c(1,2), delim = &quot;;&quot;) # gets some warnings, but so far has been fine</code></pre>
 <pre><code>## Rows: 46 Columns: 2
-## ── Column specification ──────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────
 ## Delimiter: &quot;;&quot;
 ## chr (2): X1, X2
 ## 
@@ -355,6 +356,39 @@ print(ggplot(plotdf, aes(x = log2(mean_expr_cer + 1),
 <div id="how-many-genes-does-each-tfdel-affect-in-each-species"
 class="section level2">
 <h2>How many genes does each TFdel affect in each species?</h2>
+<p>How many genes are affected in shams vs real knockout lines?</p>
+<pre class="r"><code>plotdf &lt;- bind_rows(mutate(TFdeldf, type = &quot;real&quot;),
+                    mutate(TFdeldf_sham1, type = &quot;sham1&quot;),
+                    mutate(TFdeldf_sham2, type = &quot;sham2&quot;)) |&gt; 
+  filter(organism == allele) |&gt; 
+  select(gene_name, organism, lfc, padj, type) |&gt; 
+  group_by(organism, type) |&gt; 
+  summarise(nSig = sum(abs(lfc) &gt; eff_thresh &amp; padj &lt; p_thresh))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;organism&#39;. You can override using the
+## `.groups` argument.</code></pre>
+<pre class="r"><code>p &lt;- ggplot(plotdf, aes(x = type, 
+                        y = nSig)) +
+  geom_histogram(aes(fill = organism), stat = &quot;identity&quot;) +
+  geom_text(aes(x = type, y = nSig, label = nSig), nudge_y = 500) +
+  scale_fill_discrete(limits = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                      type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;])) +
+  facet_wrap(~factor(organism, levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) +
+  theme_classic() +
+  xlab(&quot;&quot;) +
+  ylab(&quot;Number of significantly differentiall expressed\ngenes across all 46 TF knockouts&quot;) +
+  theme(legend.position = &quot;none&quot;)</code></pre>
+<pre><code>## Warning in geom_histogram(aes(fill = organism), stat = &quot;identity&quot;): Ignoring
+## unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/shams.pdf&quot;,
+#     width = 5, height = 4)
+# p
+# dev.off()</code></pre>
 <p>Barplots of nGenes up or down in response to each TF deletion.</p>
 <p>If we only consider a TF effect shared if it affects the same gene in
 multiple yeasts and occurs at the same timepoint and direction:</p>
@@ -364,8 +398,8 @@ multiple yeasts and occurs at the same timepoint and direction:</p>
   select(gene_name, deletion, organism, timepoint, lfc_sign) |&gt;
   group_by(gene_name, deletion, timepoint, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;, &#39;timepoint&#39;.
-## You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;, &#39;timepoint&#39;. You
+## can override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 33782 / 47512 ( 0.7110204 %)</code></pre>
@@ -379,8 +413,8 @@ timepoint:</p>
   #unique() |&gt; # unique stops double-counting of gene-deletion-lfc_sign combos that affect multiple timepoints, but that currently results in single-species effects becoming a larger portion of the total effects than the timepoint-specific chunk above, which is counterintuitive so commenting it for now
   group_by(gene_name, deletion, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
-## override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 27143 / 41481 ( 0.6543478 %)</code></pre>
@@ -391,17 +425,16 @@ definition:</p>
 <pre class="r"><code>sigdf &lt;- filter(TFdeldf, padj &lt; p_thresh &amp; abs(lfc) &gt; eff_thresh &amp; organism == allele)
 plotdf &lt;- sigdf |&gt; filter(organism == allele)
 # TF-gene combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
+p &lt;- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
                                 plotdf$deletion[plotdf$organism == &quot;cer&quot;], sep = &quot;_&quot;), 
                    Spar = paste(plotdf$gene_name[plotdf$organism == &quot;par&quot;], 
                                 plotdf$deletion[plotdf$organism == &quot;par&quot;], sep = &quot;_&quot;),
                    Hyb = paste(plotdf$gene_name[plotdf$organism == &quot;hyb&quot;], 
                                 plotdf$deletion[plotdf$organism == &quot;hyb&quot;], sep = &quot;_&quot;))) + 
                 scale_fill_gradient(low=&quot;grey90&quot;,high = &quot;red&quot;) +
-  ggtitle(&quot;TF-gene combination is shared&quot;)</code></pre>
-<p><img src="Fig_TFdel_files/figure-html/venn-1.png" width="672" /></p>
-<pre class="r"><code># TF-gene-direction combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
+  ggtitle(&quot;TF-gene combination is shared&quot;)
+# TF-gene-direction combo is shared:
+p_dir &lt;- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
                                 plotdf$deletion[plotdf$organism == &quot;cer&quot;],
                                 sign(plotdf$lfc)[plotdf$organism == &quot;cer&quot;], sep = &quot;_&quot;), 
                    Spar = paste(plotdf$gene_name[plotdf$organism == &quot;par&quot;], 
@@ -411,10 +444,9 @@ ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&qu
                                plotdf$deletion[plotdf$organism == &quot;hyb&quot;],
                                sign(plotdf$lfc)[plotdf$organism == &quot;hyb&quot;], sep = &quot;_&quot;))) + 
   scale_fill_gradient(low=&quot;grey90&quot;,high = &quot;red&quot;) +
-  ggtitle(&quot;TF-gene-direction combination is shared&quot;)</code></pre>
-<p><img src="Fig_TFdel_files/figure-html/venn-2.png" width="672" /></p>
-<pre class="r"><code># TF-gene-direction-timepoint combo is shared:
-ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
+  ggtitle(&quot;TF-gene-direction combination is shared&quot;)
+# TF-gene-direction-timepoint combo is shared:
+p_dirTP &lt;- ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&quot;], 
                                 plotdf$deletion[plotdf$organism == &quot;cer&quot;],
                                 sign(plotdf$lfc)[plotdf$organism == &quot;cer&quot;],
                                 plotdf$timepoint[plotdf$organism == &quot;cer&quot;], sep = &quot;_&quot;), 
@@ -428,7 +460,294 @@ ggVennDiagram(list(Scer = paste(plotdf$gene_name[plotdf$organism == &quot;cer&qu
                                 plotdf$timepoint[plotdf$organism == &quot;hyb&quot;], sep = &quot;_&quot;))) + 
   scale_fill_gradient(low=&quot;grey90&quot;,high = &quot;red&quot;) +
   ggtitle(&quot;TF-gene-direction-timepoint combination is shared&quot;)</code></pre>
-<p><img src="Fig_TFdel_files/figure-html/venn-3.png" width="672" /></p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/VennTFdel.pdf&quot;,
+#     width = 4, height = 4)
+# p
+# dev.off()</code></pre>
+<p>Number of TFs each gene is affected by in each background:</p>
+<pre class="r"><code>plotdf &lt;- expand_grid(gene_name = genedf$gene_name,
+                      organism = c(&quot;cer&quot;, &quot;hyb&quot;, &quot;par&quot;))
+sigdf &lt;- TFdeldf |&gt; filter(abs(lfc) &gt; eff_thresh &amp; padj &lt; p_thresh)
+plotdf$nTFs &lt;- map2(plotdf$gene_name, plotdf$organism, \(g, o) {
+  df_go &lt;- sigdf |&gt; filter(gene_name == g &amp; organism == o &amp; allele == o) |&gt; 
+    select(deletion) |&gt; unique()
+  return(nrow(df_go))
+}) |&gt; unlist()
+p &lt;- ggplot(plotdf, aes(x = nTFs)) +
+  geom_histogram(stat = &quot;count&quot;, aes(fill = organism)) +
+  scale_fill_discrete(limits = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                      type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;])) +
+  facet_wrap(~factor(organism, levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) +
+  theme_classic() +
+  ylab(&quot;Number of genes&quot;) +
+  xlab(&quot;Number of TF knockouts that significantly affect expression of each gene&quot;) +
+  theme(legend.position = &quot;none&quot;)</code></pre>
+<pre><code>## Warning in geom_histogram(stat = &quot;count&quot;, aes(fill = organism)): Ignoring
+## unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/nTF%20histograms-1.png" width="672" /></p>
+<p>For the paper figure:</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/nTFs.pdf&quot;,
+#     width = 9, height = 2)
+# p
+# dev.off()</code></pre>
+</div>
+<div id="allele-specific-tf-effects-in-the-hybrid"
+class="section level2">
+<h2>Allele-specific TF effects in the hybrid</h2>
+<pre class="r"><code>cat(&quot;correlation between Hyc and Hyp for all genes:&quot;)</code></pre>
+<pre><code>## correlation between Hyc and Hyp for all genes:</code></pre>
+<pre class="r"><code>plotdf &lt;- TFdeldf |&gt; filter(organism == &quot;hyb&quot; &amp; allele != &quot;hyb&quot;) |&gt; 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |&gt; 
+  pivot_wider(id_cols = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;timepoint&quot;),
+              names_from = &quot;allele&quot;, values_from = c(&quot;lfc&quot;, &quot;padj&quot;)) 
+cor(plotdf$lfc_cer, plotdf$lfc_par, use = &quot;complete.obs&quot;)</code></pre>
+<pre><code>## [1] 0.280919</code></pre>
+<pre class="r"><code>cat(&quot;correlation when Hyc or Hyp are sig:&quot;)</code></pre>
+<pre><code>## correlation when Hyc or Hyp are sig:</code></pre>
+<pre class="r"><code>plotdf_oneSig &lt;- plotdf |&gt; 
+  filter(padj_cer &lt; p_thresh | padj_par &lt; p_thresh)
+cor(plotdf_oneSig$lfc_cer, plotdf_oneSig$lfc_par, use = &quot;complete.obs&quot;)</code></pre>
+<pre><code>## [1] 0.3197932</code></pre>
+<pre class="r"><code>cat(&quot;correlation when both alleles are sig:&quot;)</code></pre>
+<pre><code>## correlation when both alleles are sig:</code></pre>
+<pre class="r"><code>plotdf_bothSig &lt;- plotdf_oneSig |&gt; 
+  filter(padj_cer &lt; p_thresh &amp; padj_par &lt; p_thresh)
+cor(plotdf_bothSig$lfc_cer, plotdf_bothSig$lfc_par, use = &quot;complete.obs&quot;)</code></pre>
+<pre><code>## [1] 0.8747146</code></pre>
+<pre class="r"><code>cat(&quot;correlation when both alleles are sig and in the same direction:&quot;)</code></pre>
+<pre><code>## correlation when both alleles are sig and in the same direction:</code></pre>
+<pre class="r"><code>plotdf_bothSigSameDir &lt;- plotdf_bothSig |&gt; 
+  filter(sign(lfc_cer) == sign(lfc_par))
+cor(plotdf_bothSigSameDir$lfc_cer, plotdf_bothSigSameDir$lfc_par, use = &quot;complete.obs&quot;)</code></pre>
+<pre><code>## [1] 0.9073796</code></pre>
+<pre class="r"><code>cat(&quot;fraction of effects where both alleles are affected out of cases where at least one allele is affected:&quot;)</code></pre>
+<pre><code>## fraction of effects where both alleles are affected out of cases where at least one allele is affected:</code></pre>
+<pre class="r"><code>nrow(plotdf_bothSig)/nrow(plotdf_oneSig)</code></pre>
+<pre><code>## [1] 0.2692149</code></pre>
+<pre class="r"><code>p &lt;- ggplot(data = tibble(n = c(nrow(plotdf_bothSig), 
+                           nrow(plotdf_oneSig) - nrow(plotdf_bothSig)),
+                     type = c(&quot;both alleles&quot;, &quot;one allele&quot;))) + 
+  geom_bar(aes(x = type, y = n), stat = &quot;identity&quot;, 
+           fill = &quot;grey&quot;, color = &quot;black&quot;) +
+  xlab(&quot;&quot;) +
+  ylab(&quot;number of significant expression effects\n across all 46 TF knockouts&quot;) +
+  theme_classic() +
+  theme(legend.position = &quot;none&quot;,
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  ggtitle(&quot;Hybrid allele-specific\n TF knockout effects&quot;)
+p</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-4-1.png" width="672" />
+For the paper figure</p>
+<pre class="r"><code> pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/hybridBarplot.pdf&quot;,
+    width = 2.6, height = 3.5)
+p
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<p>Fraction of times the combined Hyb is significant when one of the
+alleles is. (Just for curiousity on which type of count data is has more
+power in DESeq2)</p>
+<pre class="r"><code>plotdf &lt;- TFdeldf |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |&gt; 
+  pivot_wider(id_cols = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;timepoint&quot;),
+              names_from = &quot;allele&quot;, values_from = c(&quot;lfc&quot;, &quot;padj&quot;)) |&gt; 
+  filter(padj_cer &lt; p_thresh | padj_par &lt; p_thresh)
+sum(plotdf$padj_hyb &lt; p_thresh)/nrow(plotdf)</code></pre>
+<pre><code>## [1] 0.7095341</code></pre>
+<p>Fraction of times the combined Hyb is significant when neither
+alleles is:</p>
+<pre class="r"><code>plotdf &lt;- TFdeldf |&gt; filter(organism == &quot;hyb&quot;) |&gt; 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |&gt; 
+  pivot_wider(id_cols = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;timepoint&quot;),
+              names_from = &quot;allele&quot;, values_from = c(&quot;lfc&quot;, &quot;padj&quot;)) |&gt; 
+  filter(padj_cer &gt;= p_thresh &amp; padj_par &gt;= p_thresh)
+sum(plotdf$padj_hyb &lt; p_thresh)/nrow(plotdf)</code></pre>
+<pre><code>## [1] 0.018015</code></pre>
+<p>Example hybrid genes in each category</p>
+<pre class="r"><code># first determine categories
+plotdf &lt;- TFdeldf |&gt; filter(organism == &quot;hyb&quot; &amp; allele != &quot;hyb&quot;) |&gt; 
+  select(gene_name, deletion, timepoint, lfc, padj, allele) |&gt; 
+  pivot_wider(id_cols = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;timepoint&quot;),
+              names_from = &quot;allele&quot;, values_from = c(&quot;lfc&quot;, &quot;padj&quot;)) |&gt; 
+  filter(padj_cer &lt; p_thresh | padj_par &lt; p_thresh)
+# then select random genes from each group
+highExpressedGenes &lt;- rownames(counts)[rowMeans(counts) &gt; 30]
+gene_Hyc &lt;- plotdf |&gt; filter((padj_cer &lt; p_thresh) &amp; 
+                               !(padj_par &lt; p_thresh) &amp;
+                               (lfc_cer &lt; -10) &amp;
+                               !(abs(lfc_par) &gt; eff_thresh) &amp;
+                               gene_name %in% highExpressedGenes) |&gt; 
+  slice_sample(n = 1)
+gene_Hyp &lt;- plotdf |&gt; filter(!(padj_cer &lt; p_thresh) &amp; 
+                               (padj_par &lt; p_thresh) &amp;
+                               !(abs(lfc_cer) &gt; eff_thresh) &amp;
+                               (abs(lfc_par) &gt; 2*eff_thresh) &amp;
+                               gene_name %in% highExpressedGenes) |&gt; 
+  slice_sample(n = 1)
+gene_bothSame &lt;- plotdf |&gt; filter((padj_cer &lt; p_thresh) &amp; 
+                                    (padj_par &lt; p_thresh) &amp;
+                                    (abs(lfc_cer) &gt; 2*eff_thresh) &amp;
+                                    (abs(lfc_par) &gt; 2*eff_thresh) &amp;
+                                    (sign(lfc_par) == sign(lfc_cer)) &amp;
+                                    gene_name %in% highExpressedGenes) |&gt; 
+  slice_sample(n = 1)
+gene_bothDifferent &lt;- plotdf |&gt; filter((padj_cer &lt; p_thresh) &amp; 
+                                         (padj_par &lt; p_thresh) &amp;
+                                         (abs(lfc_cer) &gt; 2*eff_thresh) &amp;
+                                         (abs(lfc_par) &gt; 2*eff_thresh) &amp;
+                                         (sign(lfc_par) != sign(lfc_cer)) &amp;
+                                         gene_name %in% highExpressedGenes) |&gt; 
+  slice_sample(n = 1)
+
+p_Hyc &lt;- plotGenesTFdel(.gene_idxs = gene_Hyc$gene_name, .tf = gene_Hyc$deletion,
+                        .parents_or_hybrid = &quot;hybrid&quot;) +
+  ggtitle(paste(&quot;Hyc only\n&quot;, gene_Hyc$gene_name, gene_Hyc$deletion, gene_Hyc$timepoint))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre class="r"><code>p_Hyp &lt;- plotGenesTFdel(.gene_idxs = gene_Hyp$gene_name, .tf = gene_Hyp$deletion,
+                        .parents_or_hybrid = &quot;hybrid&quot;) +
+  ggtitle(paste(&quot;Hyp only\n&quot;, gene_Hyp$gene_name, gene_Hyp$deletion, gene_Hyp$timepoint))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre class="r"><code>p_bothSame &lt;- plotGenesTFdel(.gene_idxs = gene_bothSame$gene_name, 
+                             .tf = gene_bothSame$deletion,
+                             .parents_or_hybrid = &quot;hybrid&quot;) +
+  ggtitle(paste(&quot;Both, same direction\n&quot;, gene_bothSame$gene_name, gene_bothSame$deletion, gene_bothSame$timepoint))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre class="r"><code>p_bothDifferent &lt;- plotGenesTFdel(.gene_idxs = gene_bothDifferent$gene_name, 
+                             .tf = gene_bothDifferent$deletion,
+                             .parents_or_hybrid = &quot;hybrid&quot;) +
+  ggtitle(paste(&quot;Both, opposite directions\n&quot;, gene_bothDifferent$gene_name, gene_bothDifferent$deletion, gene_bothDifferent$timepoint))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre class="r"><code>ggarrange(p_Hyc, p_Hyp, p_bothSame, p_bothDifferent,
+          nrow = 2, ncol = 2, common.legend = TRUE)</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/example%20genes-1.png" width="672" />
+For the paper figure:</p>
+<pre class="r"><code># # Hyc
+# pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/geneExampleHyc.pdf&quot;,
+#     width = 3, height = 2.5)
+# p_Hyc
+# dev.off()
+# # Hyp
+# pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/geneExampleHyp.pdf&quot;,
+#     width = 3, height = 2.5)
+# p_Hyp
+# dev.off()
+# # both same direction
+# pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/geneExampleBothSame.pdf&quot;,
+#     width = 3, height = 2.5)
+# p_bothSame
+# dev.off()
+# # both different direction
+# pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/geneExampleBothDifferent.pdf&quot;,
+#     width = 3, height = 2.5)
+# p_bothDifferent
+# dev.off()</code></pre>
+<p>Scatter plots of log2 fold changes (with example genes labeled)</p>
+<pre class="r"><code>p_both &lt;- ggplot(data = filter(plotdf, padj_cer &lt; p_thresh &amp; padj_par &lt; p_thresh), 
+       aes(x = lfc_cer, y = lfc_par)) + 
+  geom_point(aes(color = sign(lfc_cer) == sign(lfc_par))) +
+  # # comment/uncomment second set of points to know where example
+  # # genes are (ggMarginal can&#39;t handle second set of points though)
+  # geom_point(data = bind_rows(gene_bothSame, gene_bothDifferent),
+  #            aes(x = lfc_cer, y = lfc_par), 
+  #            size = 3, shape = 1, color = &quot;gold&quot;) +
+  scale_color_discrete(limits = c(TRUE, FALSE),
+                       type = c(&quot;black&quot;, &quot;red&quot;)) +
+  theme_classic() +
+  theme(legend.position = &quot;left&quot;) +
+  ggtitle(&quot;genes with a significant effect\n in both hybrid alleles&quot;) +
+  labs(color = &quot;Fold changes are\nin the same direction&quot;,
+       x = &quot;Log2 fold change in Hyc&quot;,
+       y = &quot;Log2 fold change in Hyp&quot;) +
+  geom_abline(intercept = 0, slope = 1)
+plotdf_one &lt;- filter(plotdf, !(padj_cer &lt; p_thresh &amp; padj_par &lt; p_thresh)) |&gt;
+  slice_sample(n = 10000) |&gt; 
+  mutate(sig_species = if_else(padj_cer &lt; p_thresh,
+                               true = &quot;Hyc&quot;,
+                               false = &quot;Hyp&quot;))
+p_one &lt;- ggplot(plotdf_one, aes(x = lfc_cer, y = lfc_par)) + 
+  geom_point(aes(color = sig_species), alpha = 0.25) +
+  # # comment/uncomment second set of points to know where example
+  # # genes are (ggMarginal can&#39;t handle second set of points though)
+  # geom_point(data = bind_rows(gene_Hyc, gene_Hyp),
+  #            aes(x = lfc_cer, y = lfc_par),
+  #            shape = 1, size = 3, color = &quot;gold&quot;) +
+  scale_color_discrete(limits = c(&quot;Hyc&quot;, &quot;Hyp&quot;),
+                       type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;], 
+                                conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;])) +
+  theme_classic() +
+  theme(legend.position = &quot;left&quot;) +
+  ggtitle(&quot;genes with a significant effect\n in one hybrid allele&quot;) +
+  labs(color = &quot;Differentially\nexpressed allele&quot;,
+       x = &quot;Log2 fold change in Hyc&quot;,
+       y = &quot;Log2 fold change in Hyp&quot;) +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept = 0)
+p_both</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/hybrid%20allele%20lfc%20scatterplots-1.png" width="672" /></p>
+<pre class="r"><code>p_one</code></pre>
+<p><img src="Fig_TFdel_files/figure-html/hybrid%20allele%20lfc%20scatterplots-2.png" width="672" /></p>
+<p>For the paper figure (versions without ggMarginal so that we can
+highlight sample points):</p>
+<pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/hybridLFC_both_ExampleAnnotated.pdf&quot;, width = 5.5, height = 4)
+# p_both
+# dev.off()
+# pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/hybridLFC_one_ExampleAnnotated.pdf&quot;, width = 5.5, height = 4)
+# p_one
+# dev.off()</code></pre>
+<p>For the paper figure:</p>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/hybridLFC_both.pdf&quot;,
+    width = 5.5, height = 4)
+grid::grid.draw(ggMarginal(p_both, groupColour = TRUE, groupFill = TRUE, margin = &quot;both&quot;))
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/hybridLFC_one.pdf&quot;,
+    width = 5.5, height = 4)
+grid::grid.draw(ggMarginal(p_one, groupColour = TRUE, groupFill = TRUE, margin = &quot;both&quot;))
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
 <pre class="r"><code>plotBarplot &lt;- function(.updf, .downdf, .title) {
   p &lt;- ggplot() +
     geom_histogram(data = .updf, 
@@ -457,8 +776,8 @@ plotdf &lt;- sigdf |&gt;
   group_by(gene_name, deletion) |&gt; 
   summarise(orgs = list(organism),
             lfc_sign = unique(lfc_sign))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
-## override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>checkOrgs &lt;- function(.query, .orgs, .excludeOthers = FALSE) {
   if (!.excludeOthers) {
     return(all(.query %in% unlist(.orgs)))
@@ -482,7 +801,7 @@ test |&gt; filter(gene_name == &quot;YMR242C&quot; &amp; deletion == &quot;BAS1&
 <pre class="r"><code>table(unlist(test$orgs)) # can have hyb</code></pre>
 <pre><code>## 
 ##  cer  hyb  par 
-## 3072 1182 3325</code></pre>
+## 3089 3132 3342</code></pre>
 <pre class="r"><code>test &lt;- filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quot;),
                                  .orgs = orgs,
                                  .excludeOthers = TRUE)) |&gt; 
@@ -490,13 +809,13 @@ test |&gt; filter(gene_name == &quot;YMR242C&quot; &amp; deletion == &quot;BAS1&
 table(unlist(test$orgs)) # shouldn&#39;t have any hyb</code></pre>
 <pre><code>## &lt; table of extent 0 &gt;</code></pre>
 <pre class="r"><code>nrow(test) # should have same nrow as Scer-Spar exclusive ring of Venn</code></pre>
-<pre><code>## [1] 1486</code></pre>
+<pre><code>## [1] 1409</code></pre>
 <pre class="r"><code># nEffects that are shared between all three yeasts:
 filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;hyb&quot;, &quot;par&quot;), 
                          .orgs = orgs, .excludeOthers = TRUE)) |&gt; 
   select(gene_name, deletion) |&gt; unique() # should be same nrow as Venn center count</code></pre>
-<pre><code>## # A tibble: 648 × 2
-## # Groups:   gene_name, deletion [648]
+<pre><code>## # A tibble: 725 × 2
+## # Groups:   gene_name, deletion [725]
 ##    gene_name deletion
 ##    &lt;chr&gt;     &lt;chr&gt;   
 ##  1 YAL005C   INO4    
@@ -505,17 +824,17 @@ filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;hyb&quot;, &quot;p
 ##  4 YAL038W   GCR2    
 ##  5 YAL060W   GCR2    
 ##  6 YAL062W   DAL80   
-##  7 YAL067C   MET28   
-##  8 YAR015W   URE2    
-##  9 YBL002W   ROX1    
-## 10 YBL021C   HAP3    
-## # ℹ 638 more rows</code></pre>
+##  7 YAL062W   GCR2    
+##  8 YAL067C   MET28   
+##  9 YAR015W   URE2    
+## 10 YBL002W   ROX1    
+## # ℹ 715 more rows</code></pre>
 <pre class="r"><code>max_nDE &lt;- sigdf |&gt; mutate(lfc_sign = sign(lfc)) |&gt; 
   select(deletion, organism, gene_name, lfc_sign) |&gt; 
   unique() |&gt; group_by(deletion, organism, lfc_sign) |&gt; summarise(n = n()) |&gt;
   select(n) |&gt; pull() |&gt; max()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can
-## override using the `.groups` argument.
+<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can override
+## using the `.groups` argument.
 ## Adding missing grouping variables: `deletion`, `organism`</code></pre>
 <pre class="r"><code>ylims_unique &lt;- c(-max_nDE+10, max_nDE-10)
 ylims_shared &lt;- c(-100, 100)
@@ -603,7 +922,7 @@ effects and hyb-par effects?</p>
 <pre><code>##         lfc_sign
 ## organism   -1    1
 ##      cer  438   44
-##      hyb 2566  593
+##      hyb 6483 1307
 ##      par 1171  155</code></pre>
 <p>Second sanity check: MET28 has the most fully conserved</p>
 <pre class="r"><code>sigdf |&gt; 
@@ -615,27 +934,26 @@ effects and hyb-par effects?</p>
   ungroup() |&gt; 
   filter(all(list(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;) %in% unlist(orgs))) |&gt; 
   select(deletion) |&gt; pull() |&gt; table()</code></pre>
-<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group was
-## deprecated in dplyr 1.1.0.
+<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group was deprecated in
+## dplyr 1.1.0.
 ## ℹ Please use `reframe()` instead.
-## ℹ When switching from `summarise()` to `reframe()`, remember that
-##   `reframe()` always returns an ungrouped data frame and adjust
-##   accordingly.
+## ℹ When switching from `summarise()` to `reframe()`, remember that `reframe()`
+##   always returns an ungrouped data frame and adjust accordingly.
 ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
 ## generated.</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
-## override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre><code>## 
-##   ACE2   AFT1  ARG80  ARG81   BAS1   CBF1   CHA4  DAL80   FKH1   GAT1 
-##    106    523    627    533   1537   2085    283    273    280    269 
-##   GCN4   GCR2   GLN3   GZF3   HAP1   HAP2   HAP3   HAP4   HAP5   INO2 
-##   1086   1220   1564    216    379    886   1155    511    812    503 
-##   INO4   LEU3   MBP1  MET28   MIG1   MSN2   NRG1   PHD1   PHO4   RFX1 
-##    997     92    682   1598    894    388    603    117   1927    119 
-##   RGT1 RIM101   ROX1   RPN4   RTG1   RTG3   SKN7   SOK2   STB5   SUM1 
-##    469    516    940   1012    288    686    120    384   2213    440 
-##   SWI4   SWI5   TEC1   URE2   YAP1   ZAP1 
-##   1106    474    408    582    316    432</code></pre>
+##   ACE2   AFT1  ARG80  ARG81   BAS1   CBF1   CHA4  DAL80   FKH1   GAT1   GCN4 
+##    162    598    737    623   1537   2085    430    367    428    293   1086 
+##   GCR2   GLN3   GZF3   HAP1   HAP2   HAP3   HAP4   HAP5   INO2   INO4   LEU3 
+##   1660   2247    269    480   1175   1292    674    961    826   1269    112 
+##   MBP1  MET28   MIG1   MSN2   NRG1   PHD1   PHO4   RFX1   RGT1 RIM101   ROX1 
+##    806   2161   1024    439    678    137   2879    185    511    914   1064 
+##   RPN4   RTG1   RTG3   SKN7   SOK2   STB5   SUM1   SWI4   SWI5   TEC1   URE2 
+##   1536    288    837    169    447   2261    512   1899   1026    568    769 
+##   YAP1   ZAP1 
+##    316    744</code></pre>
 <p>Third sanity check: BAS1/CBF1 have no hybrid-unique effects</p>
 <pre class="r"><code>test &lt;- sigdf |&gt; 
   mutate(lfc_sign = sign(lfc)) |&gt; 
@@ -647,21 +965,22 @@ effects and hyb-par effects?</p>
   filter(checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quot;),
                      .orgs = orgs, .excludeOthers = FALSE)) |&gt; 
   select(orgs) |&gt; pull()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using
-## the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using the
+## `.groups` argument.</code></pre>
 <pre class="r"><code>map(test, \(o) {
   return(paste0(sort(unique(unlist(o)))))
 }) |&gt; unlist() |&gt; table()</code></pre>
 <pre><code>## 
 ##  cer  par 
 ## 2256 1759</code></pre>
-<p>How many replicates do they have?</p>
+<p>How many replicates do BAS1/CBF1 have in hybrids?</p>
 <pre class="r"><code>sample_info |&gt; filter(genotype %in% c(&quot;BAS1delete&quot;, &quot;CBF1delete&quot;) &amp; organism == &quot;hyb&quot; &amp; allele == &quot;hyb&quot;) |&gt; select(time_point_str, genotype) |&gt; table()</code></pre>
 <pre><code>##               genotype
 ## time_point_str CBF1delete
 ##    0 h, YPD             1
 ##    1 h, low N           1
 ##    16 h, low N          1</code></pre>
+<p>1 in CBF1, that would do it.</p>
 </div>
 <div
 id="what-percent-of-divergent-vs-conserved-wildtype-nitrogen-responses-are-responding-to-tf-deletions"

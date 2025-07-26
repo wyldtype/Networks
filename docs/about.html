@@ -289,10 +289,10 @@ plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
                                        .name2 = &quot;S. paradoxus WT&quot;,
                                        .name3 = &quot;S. cerevisiae TFdel&quot;,
                                        .name4 = &quot;S. paradoxus TFdel&quot;,
-                                       .color1 = &quot;orange1&quot;,
-                                       .color2 = &quot;blue2&quot;,
-                                       .color3 = &quot;orange4&quot;,
-                                       .color4 = &quot;blue4&quot;,
+                                       .color1 = &quot;#F15F5B&quot;,
+                                       .color2 = &quot;#47AA48&quot;,
+                                       .color3 = &quot;#F15F5B&quot;,
+                                       .color4 = &quot;#47AA48&quot;,
                                        .normalization = c(&quot;none&quot;, &quot;log2&quot;, &quot;scale&quot;, &quot;centered log2&quot;),
                                        .show_points_wt = TRUE,
                                        .show_points_tfdel = TRUE,
@@ -401,7 +401,7 @@ plotExpressionProfileTFdel &lt;- function(.cts1, .cts2, .cts3, .cts4,
   if (.show_points_wt &amp; .show_wt) {
     p &lt;- p + geom_jitter(data = filter(plotdf, genotype == &quot;WT&quot;),
                          aes(x = time_point_str, y = expr, color = group_id), 
-                         size = 0.1, alpha = 0.5, shape = &quot;.&quot;) 
+                         size = 0.3, alpha = 1, shape = &quot;.&quot;) 
   }
   if (.show_lines_wt &amp; .show_wt) {
     # lines trace average expr at each timepoint/experiment for each group
@@ -471,10 +471,12 @@ plotExpressionProfileTFdel(.cts1 = counts[&quot;YPL015C&quot;, sample_info$organ
 ## override using the `.groups` argument.
 ## Adding missing grouping variables: `time_point_str`, `genotype`
 ## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
-## using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
-## using the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
+## the `.groups` argument.</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_point()`).</code></pre>
 <p><img src="about_files/figure-html/plotExpressionProfileTFdel-1.png" width="672" /></p>
 <pre class="r"><code># Plots each genotype as a separate line
 plotExpressionProfileTFdels &lt;- function(.cts,
@@ -854,7 +856,43 @@ makeUpsetPlot &lt;- function(.df, .group_name, .group_members, .item_names,
 # makeUpsetPlot(.df = effectdf,
 #               .group_name = &quot;organism&quot;,
 #               .group_members = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyc&quot;, &quot;hyp&quot;),
-#               .item_names = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;effect&quot;))s</code></pre>
+#               .item_names = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;effect&quot;))
+
+#### Gene Ontology Enrichment ####
+getGOSlimDf &lt;- function(.idxs, .group_name, .file_prefix = &quot;gene_ontology/results/&quot;,
+                        .min_hits = 5) {
+  test_table &lt;- goslim |&gt; filter(ORF %in% .idxs) |&gt; select(GOslim_term) |&gt; table()
+  test_table &lt;- test_table[test_table &gt;= .min_hits]
+  testdf &lt;- tibble(&quot;term&quot; = names(test_table),
+                   &quot;group_count&quot; = as.numeric(test_table))
+  testdf$overall_count &lt;- map(testdf$term, \(x) {
+    ct &lt;- goslim |&gt; filter(GOslim_term == x) |&gt; select(ORF) |&gt; 
+      pull() |&gt; unique() |&gt; length()
+    return(ct)
+  }) |&gt; unlist()
+  testdf$exact_pval &lt;- map2(testdf$group_count, testdf$overall_count, \(x, y) {
+    n_mod &lt;- length(.idxs)
+    n_genes &lt;- length(unique(finaldf$gene_name))
+    exact_table &lt;- rbind(c(x, n_mod - x), c(y - x, n_genes - n_mod - y))
+    exact_result &lt;- fisher.test(exact_table, alternative = &quot;greater&quot;)
+    return(exact_result$p.value)
+  }) |&gt; unlist()
+  testdf$sig &lt;- testdf$exact_pval &lt; 0.001
+  testdf$genes &lt;- map(testdf$term, \(x) {
+    termgenes &lt;- goslim |&gt; filter(ORF %in% .idxs &amp; GOslim_term == x) |&gt; 
+      select(ORF) |&gt; pull() |&gt; unique()
+    return(reduce(termgenes, paste, sep = &quot; &quot;))
+  }) |&gt; unlist()
+  
+  write_csv(arrange(testdf, exact_pval, desc(group_count)), 
+            file = paste0(.file_prefix, .group_name, &quot;.csv&quot;),
+            quote = &quot;none&quot;, 
+            col_names = TRUE)
+  return(testdf)
+}
+# tests for getGOSlimDf
+# test &lt;- getGOSlimDf(.idxs = c(&quot;YGR192C&quot;, &quot;YJR009C&quot;, &quot;YJL052W&quot;),
+#                     .group_name = &quot;tdhs&quot;, .min_hits = 1)</code></pre>
 
 
 
