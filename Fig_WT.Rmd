@@ -740,6 +740,36 @@ For the paper figure:
 # dev.off()
 ```
 
+Same plot but just the conserved genes to see if they have the same pattern
+```{r}
+plotdf <- genedf |> drop_na() |>
+  left_join(y = sgd_lookup, by = "gene_name") |>
+  filter(cor_cer > 0.8 & cor_par > 0.8)
+p <- ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
+  stat_density_2d(aes(fill = log(..density.. + 1)), geom = "raster", contour = FALSE) +
+  geom_point(data = filter(plotdf, conservation == "unresponsive"), aes(color = conservation), size = 0.5) +
+  geom_point(data = filter(plotdf, conservation != "unresponsive"), aes(color = conservation), size = 0.5) +
+  theme_classic() + 
+  theme(legend.position = "none") +
+  xlab("correlation (Scer, Hyb)") +
+  ylab("correlation (Spar, Hyb)") +
+  xlim(c(0.8, 1)) +
+  ylim(c(0.8, 1)) +
+  scale_fill_distiller(palette = "Spectral") +
+  scale_color_discrete(limits = conservation_colordf$limits,
+                       type = conservation_colordf$value)
+ggMarginal(p, type = "histogram")
+```
+The somewhat do!
+
+For the paper figure:
+```{r figure_hybridDominancePoint8Genes}
+pdf("../Umich_Dissertation/chapters/figures/Networks/HybridDominancePoint8Genes.pdf",
+    width = 5, height = 5)
+grid::grid.draw(ggMarginal(p, type = "histogram"))
+dev.off()
+```
+
 ```{r saving}
 save(genedf, file = "data_files/GeneDataFrame.RData")
 ```
