@@ -255,7 +255,16 @@ $(document).ready(function () {
   <a href="DESeq2.html">DESeq2</a>
 </li>
 <li>
-  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+  <a href="Fig_WT.html">Comparing WT LowN Response</a>
+</li>
+<li>
+  <a href="Fig_TFdel.html">Effects of TF deletions</a>
+</li>
+<li>
+  <a href="Fig_Alleleic.html">Hybrid alleleic expression</a>
+</li>
+<li>
+  <a href="Fig_Variance.html">TF deletions reduce expression variation</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -651,9 +660,12 @@ test[&quot;YGR192C&quot;,] # down in Scer</code></pre>
 <pre><code>## log2 fold change (MLE): genotype GCR2delete vs WT 
 ## Wald test p-value: genotype GCR2delete vs WT 
 ## DataFrame with 1 row and 6 columns
-##          baseMean log2FoldChange     lfcSE      stat      pvalue        padj
-##         &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;   &lt;numeric&gt;   &lt;numeric&gt;
-## YGR192C   16876.7       -1.33222  0.142197  -9.36886 7.33198e-21 7.70151e-18</code></pre>
+##          baseMean log2FoldChange     lfcSE      stat      pvalue
+##         &lt;numeric&gt;      &lt;numeric&gt; &lt;numeric&gt; &lt;numeric&gt;   &lt;numeric&gt;
+## YGR192C   16876.7       -1.33222  0.142197  -9.36886 7.33198e-21
+##                padj
+##           &lt;numeric&gt;
+## YGR192C 7.70151e-18</code></pre>
 </div>
 <div id="formatting-data" class="section level2">
 <h2>Formatting Data</h2>

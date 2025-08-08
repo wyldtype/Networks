@@ -255,7 +255,16 @@ $(document).ready(function () {
   <a href="DESeq2.html">DESeq2</a>
 </li>
 <li>
-  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+  <a href="Fig_WT.html">Comparing WT LowN Response</a>
+</li>
+<li>
+  <a href="Fig_TFdel.html">Effects of TF deletions</a>
+</li>
+<li>
+  <a href="Fig_Alleleic.html">Hybrid alleleic expression</a>
+</li>
+<li>
+  <a href="Fig_Variance.html">TF deletions reduce expression variation</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -275,10 +284,12 @@ $(document).ready(function () {
 
 
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ComplexHeatmap&quot;, &quot;circlize&quot;, &quot;ggVennDiagram&quot;, &quot;ggExtra&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##          dplyr          readr          tidyr          purrr        ggplot2         ggpubr 
-##           TRUE           TRUE           TRUE           TRUE           TRUE           TRUE 
-##    matrixStats ComplexHeatmap       circlize  ggVennDiagram        ggExtra 
-##           TRUE           TRUE           TRUE           TRUE           TRUE</code></pre>
+<pre><code>##          dplyr          readr          tidyr          purrr 
+##           TRUE           TRUE           TRUE           TRUE 
+##        ggplot2         ggpubr    matrixStats ComplexHeatmap 
+##           TRUE           TRUE           TRUE           TRUE 
+##       circlize  ggVennDiagram        ggExtra 
+##           TRUE           TRUE           TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 load(&quot;data_files/DESeq2.RData&quot;)
 load(&quot;data_files/GeneDataFrame.RData&quot;)
@@ -289,7 +300,7 @@ sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ─────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13
@@ -306,7 +317,7 @@ p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
 eff_thresh &lt;- 2
 TFdel_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/yeastract_46TFs.csv&quot;, col_names = FALSE, col_select = c(1,2), delim = &quot;;&quot;) # gets some warnings, but so far has been fine</code></pre>
 <pre><code>## Rows: 46 Columns: 2
-## ── Column specification ─────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────
 ## Delimiter: &quot;;&quot;
 ## chr (2): X1, X2
 ## 
@@ -347,7 +358,8 @@ print(ggplot(plotdf, aes(x = log2(mean_expr_cer + 1),
                    y = log2(mean_expr_par + 1))) +
   geom_text(aes(label = tf, color = tf %in% NitrogenTFs)) +
   geom_abline(slope = 1, intercept = 0))</code></pre>
-<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range (`geom_text()`).</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_text()`).</code></pre>
 <p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 </div>
 <div id="how-many-genes-does-each-tfdel-affect-in-each-species"
@@ -361,7 +373,8 @@ class="section level2">
   select(gene_name, organism, lfc, padj, type) |&gt; 
   group_by(organism, type) |&gt; 
   summarise(nSig = sum(abs(lfc) &gt; eff_thresh &amp; padj &lt; p_thresh))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;organism&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;organism&#39;. You can override using
+## the `.groups` argument.</code></pre>
 <pre class="r"><code>p &lt;- ggplot(plotdf, aes(x = type, 
                         y = nSig)) +
   geom_histogram(aes(fill = organism), stat = &quot;identity&quot;) +
@@ -376,8 +389,8 @@ class="section level2">
   xlab(&quot;&quot;) +
   ylab(&quot;Number of significantly differentiall expressed\ngenes across all 46 TF knockouts&quot;) +
   theme(legend.position = &quot;none&quot;)</code></pre>
-<pre><code>## Warning in geom_histogram(aes(fill = organism), stat = &quot;identity&quot;): Ignoring unknown parameters:
-## `binwidth`, `bins`, and `pad`</code></pre>
+<pre><code>## Warning in geom_histogram(aes(fill = organism), stat = &quot;identity&quot;):
+## Ignoring unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
 <pre class="r"><code>p</code></pre>
 <p><img src="Fig_TFdel_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
 <p>For the paper figure:</p>
@@ -394,8 +407,8 @@ multiple yeasts and occurs at the same timepoint and direction:</p>
   select(gene_name, deletion, organism, timepoint, lfc_sign) |&gt;
   group_by(gene_name, deletion, timepoint, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;, &#39;timepoint&#39;. You can override using the
-## `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;, &#39;timepoint&#39;.
+## You can override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 11389 / 15058 ( 0.7563421 %)</code></pre>
@@ -409,8 +422,8 @@ timepoint:</p>
   #unique() |&gt; # unique stops double-counting of gene-deletion-lfc_sign combos that affect multiple timepoints, but that currently results in single-species effects becoming a larger portion of the total effects than the timepoint-specific chunk above, which is counterintuitive so commenting it for now
   group_by(gene_name, deletion, lfc_sign) |&gt; 
   summarise(orgs = list(organism))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override using the `.groups`
-## argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>cat(&quot;Fraction of single-yeast effects:&quot;, sum(sapply(plotdf$orgs, length) == 1), &quot;/&quot;, nrow(plotdf),
     &quot;(&quot;, sum(sapply(plotdf$orgs, length) == 1)/nrow(plotdf), &quot;%)&quot;, &quot;\n&quot;)</code></pre>
 <pre><code>## Fraction of single-yeast effects: 9720 / 13650 ( 0.7120879 %)</code></pre>
@@ -482,8 +495,8 @@ p &lt;- ggplot(plotdf, aes(x = nTFs)) +
   ylab(&quot;Number of genes&quot;) +
   xlab(&quot;Number of TF knockouts that significantly affect expression of each gene&quot;) +
   theme(legend.position = &quot;none&quot;)</code></pre>
-<pre><code>## Warning in geom_histogram(stat = &quot;count&quot;, aes(fill = organism)): Ignoring unknown parameters:
-## `binwidth`, `bins`, and `pad`</code></pre>
+<pre><code>## Warning in geom_histogram(stat = &quot;count&quot;, aes(fill = organism)): Ignoring
+## unknown parameters: `binwidth`, `bins`, and `pad`</code></pre>
 <pre class="r"><code>p</code></pre>
 <p><img src="Fig_TFdel_files/figure-html/nTF%20histograms-1.png" width="672" /></p>
 <p>For the paper figure:</p>
@@ -503,8 +516,8 @@ max_nDE &lt;- sigdf |&gt; mutate(lfc_sign = sign(lfc)) |&gt;
   select(deletion, organism, gene_name, lfc_sign) |&gt; 
   unique() |&gt; group_by(deletion, organism, lfc_sign) |&gt; summarise(n = n()) |&gt;
   select(n) |&gt; pull() |&gt; max()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can override using the `.groups`
-## argument.
+<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can
+## override using the `.groups` argument.
 ## Adding missing grouping variables: `deletion`, `organism`</code></pre>
 <pre class="r"><code>ylims &lt;- c(-max_nDE+10, max_nDE-10)
 

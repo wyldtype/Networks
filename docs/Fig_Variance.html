@@ -255,7 +255,16 @@ $(document).ready(function () {
   <a href="DESeq2.html">DESeq2</a>
 </li>
 <li>
-  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+  <a href="Fig_WT.html">Comparing WT LowN Response</a>
+</li>
+<li>
+  <a href="Fig_TFdel.html">Effects of TF deletions</a>
+</li>
+<li>
+  <a href="Fig_Alleleic.html">Hybrid alleleic expression</a>
+</li>
+<li>
+  <a href="Fig_Variance.html">TF deletions reduce expression variation</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -279,8 +288,10 @@ variance?</h1>
 load(&quot;data_files/DESeq2.RData&quot;)
 source(&quot;utils.R&quot;)
 sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr matrixStats 
-##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
+## matrixStats 
+##        TRUE</code></pre>
 <pre class="r"><code>p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
 eff_thresh &lt;- 2</code></pre>
 <div id="assigning-dominance" class="section level3">
@@ -386,8 +397,8 @@ from all effects in the same direction?</p>
   group_by(gene_name, organism, allele) |&gt; 
   summarise(nUp = sum(sign(lfc) == 1),
             nDown = sum(sign(lfc) == -1))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;organism&#39;. You can override using the `.groups`
-## argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;organism&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>p_down &lt;- ggplot(plotdf, aes(x = factor(nUp + nDown), y = nDown)) +
   geom_boxplot(aes(color = organism)) +
   geom_abline(slope = 0.5, intercept = 0) +
@@ -547,7 +558,8 @@ plotdf$tp &lt;- map(c(1:nrow(plotdf)), \(i) {
 }) |&gt; unlist()
 countdf &lt;- plotdf |&gt; group_by(tp, organism) |&gt; 
   summarise(n = n())</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the
+## `.groups` argument.</code></pre>
 <pre class="r"><code>p &lt;- ggplot(plotdf, 
        aes(x = factor(tp, levels = c(&quot;min&quot;, &quot;mid&quot;, &quot;max&quot;)), 
            y = lfc)) +
@@ -580,7 +592,8 @@ dev.off()</code></pre>
 countdf &lt;- plotdf |&gt; filter(gene_name %in% lowN_responsive_genes) |&gt; 
   group_by(tp, organism) |&gt; 
   summarise(n = n())</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the
+## `.groups` argument.</code></pre>
 <pre class="r"><code>p &lt;- ggplot(filter(plotdf, gene_name %in% lowN_responsive_genes), 
        aes(x = factor(tp, levels = c(&quot;min&quot;, &quot;mid&quot;, &quot;max&quot;)), 
            y = lfc)) +
@@ -624,8 +637,8 @@ significant numbers of effects:</p>
   group_by(gene_name, deletion, plasticity) |&gt; 
   summarise(n = n()) |&gt; 
   drop_na()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override using the `.groups`
-## argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>ggplot(plotdf, aes(x = plasticity, y = n)) +
   geom_bar(aes(fill = deletion), stat = &quot;identity&quot;) +
   facet_wrap(~deletion, nrow = 4) +
@@ -673,7 +686,8 @@ by mean expression level:</p>
   mutate(plasticity = if_else(cor_parents &gt; 0.8,
                               true = &quot;conserved&quot;,
                               false = &quot;diverged&quot;))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using
+## the `.groups` argument.</code></pre>
 <pre class="r"><code>meanexprdf &lt;- collapsed |&gt; 
   group_by(gene_name) |&gt; 
   summarise(expr_level = mean(mean_expr, na.rm = TRUE))

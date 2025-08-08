@@ -255,7 +255,16 @@ $(document).ready(function () {
   <a href="DESeq2.html">DESeq2</a>
 </li>
 <li>
-  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+  <a href="Fig_WT.html">Comparing WT LowN Response</a>
+</li>
+<li>
+  <a href="Fig_TFdel.html">Effects of TF deletions</a>
+</li>
+<li>
+  <a href="Fig_Alleleic.html">Hybrid alleleic expression</a>
+</li>
+<li>
+  <a href="Fig_Variance.html">TF deletions reduce expression variation</a>
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
@@ -275,10 +284,12 @@ $(document).ready(function () {
 
 
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ComplexHeatmap&quot;, &quot;circlize&quot;, &quot;ggVennDiagram&quot;, &quot;ggExtra&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##          dplyr          readr          tidyr          purrr        ggplot2         ggpubr 
-##           TRUE           TRUE           TRUE           TRUE           TRUE           TRUE 
-##    matrixStats ComplexHeatmap       circlize  ggVennDiagram        ggExtra 
-##           TRUE           TRUE           TRUE           TRUE           TRUE</code></pre>
+<pre><code>##          dplyr          readr          tidyr          purrr 
+##           TRUE           TRUE           TRUE           TRUE 
+##        ggplot2         ggpubr    matrixStats ComplexHeatmap 
+##           TRUE           TRUE           TRUE           TRUE 
+##       circlize  ggVennDiagram        ggExtra 
+##           TRUE           TRUE           TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 load(&quot;data_files/DESeq2.RData&quot;)
 load(&quot;data_files/GeneDataFrame.RData&quot;)
@@ -572,49 +583,57 @@ gene_bothDifferent &lt;- plotdf |&gt; filter((padj_cer &lt; p_thresh) &amp;
 p_Hyc &lt;- plotGenesTFdel(.gene_idxs = gene_Hyc$gene_name, .tf = gene_Hyc$deletion,
                         .parents_or_hybrid = &quot;hybrid&quot;) +
   ggtitle(paste(&quot;Hyc only\n&quot;, gene_Hyc$gene_name, gene_Hyc$deletion, gene_Hyc$timepoint))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
 ## using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
-## `.groups` argument.
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>p_Hyp &lt;- plotGenesTFdel(.gene_idxs = gene_Hyp$gene_name, .tf = gene_Hyp$deletion,
                         .parents_or_hybrid = &quot;hybrid&quot;) +
   ggtitle(paste(&quot;Hyp only\n&quot;, gene_Hyp$gene_name, gene_Hyp$deletion, gene_Hyp$timepoint))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
 ## using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
-## `.groups` argument.
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>p_bothSame &lt;- plotGenesTFdel(.gene_idxs = gene_bothSame$gene_name, 
                              .tf = gene_bothSame$deletion,
                              .parents_or_hybrid = &quot;hybrid&quot;) +
   ggtitle(paste(&quot;Both, same direction\n&quot;, gene_bothSame$gene_name, gene_bothSame$deletion, gene_bothSame$timepoint))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
 ## using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
-## `.groups` argument.
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>p_bothDifferent &lt;- plotGenesTFdel(.gene_idxs = gene_bothDifferent$gene_name, 
                              .tf = gene_bothDifferent$deletion,
                              .parents_or_hybrid = &quot;hybrid&quot;) +
   ggtitle(paste(&quot;Both, opposite directions\n&quot;, gene_bothDifferent$gene_name, gene_bothDifferent$deletion, gene_bothDifferent$timepoint))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
+## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
+## override using the `.groups` argument.
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## Adding missing grouping variables: `time_point_str`, `genotype`
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
 ## using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
-## `.groups` argument.
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override
+## using the `.groups` argument.</code></pre>
 <pre class="r"><code>ggarrange(p_Hyc, p_Hyp, p_bothSame, p_bothDifferent,
           nrow = 2, ncol = 2, common.legend = TRUE)</code></pre>
 <p><img src="Fig_Alleleic_files/figure-html/example%20genes-1.png" width="672" />
@@ -733,8 +752,8 @@ plotdf &lt;- sigdf |&gt;
   group_by(gene_name, deletion) |&gt; 
   summarise(orgs = list(organism),
             lfc_sign = unique(lfc_sign))</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override using the `.groups`
-## argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre class="r"><code>checkOrgs &lt;- function(.query, .orgs, .excludeOthers = FALSE) {
   if (!.excludeOthers) {
     return(all(.query %in% unlist(.orgs)))
@@ -752,7 +771,8 @@ test &lt;- filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quo
 test |&gt; filter(gene_name == &quot;YMR242C&quot; &amp; deletion == &quot;BAS1&quot; &amp; lfc_sign == -1) # should be present</code></pre>
 <pre><code>## # A tibble: 0 × 4
 ## # Groups:   gene_name, deletion [0]
-## # ℹ 4 variables: gene_name &lt;chr&gt;, deletion &lt;chr&gt;, orgs &lt;list&gt;, lfc_sign &lt;dbl&gt;</code></pre>
+## # ℹ 4 variables: gene_name &lt;chr&gt;, deletion &lt;chr&gt;, orgs &lt;list&gt;,
+## #   lfc_sign &lt;dbl&gt;</code></pre>
 <pre class="r"><code>table(unlist(test$orgs)) # can have hyb</code></pre>
 <pre><code>## &lt; table of extent 0 &gt;</code></pre>
 <pre class="r"><code>test &lt;- filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quot;),
@@ -774,8 +794,8 @@ filter(plotdf, checkOrgs(.query = list(&quot;cer&quot;, &quot;hyb&quot;, &quot;p
   select(deletion, organism, gene_name, lfc_sign) |&gt; 
   unique() |&gt; group_by(deletion, organism, lfc_sign) |&gt; summarise(n = n()) |&gt;
   select(n) |&gt; pull() |&gt; max()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can override using the `.groups`
-## argument.
+<pre><code>## `summarise()` has grouped output by &#39;deletion&#39;, &#39;organism&#39;. You can
+## override using the `.groups` argument.
 ## Adding missing grouping variables: `deletion`, `organism`</code></pre>
 <pre class="r"><code>ylims_unique &lt;- c(-max_nDE+10, max_nDE-10)
 ylims_shared &lt;- c(-100, 100)
@@ -873,13 +893,16 @@ effects and hyb-par effects?</p>
   ungroup() |&gt; 
   filter(all(list(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;) %in% unlist(orgs))) |&gt; 
   select(deletion) |&gt; pull() |&gt; table()</code></pre>
-<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group was deprecated in dplyr 1.1.0.
+<pre><code>## Warning: Returning more (or less) than 1 row per `summarise()` group was
+## deprecated in dplyr 1.1.0.
 ## ℹ Please use `reframe()` instead.
-## ℹ When switching from `summarise()` to `reframe()`, remember that `reframe()` always returns an
-##   ungrouped data frame and adjust accordingly.
-## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override using the `.groups`
-## argument.</code></pre>
+## ℹ When switching from `summarise()` to `reframe()`, remember that
+##   `reframe()` always returns an ungrouped data frame and adjust
+##   accordingly.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can
+## override using the `.groups` argument.</code></pre>
 <pre><code>## &lt; table of extent 0 &gt;</code></pre>
 <p>Third sanity check: BAS1/CBF1 have no hybrid-unique effects</p>
 <pre class="r"><code>test &lt;- sigdf |&gt; 
@@ -892,7 +915,8 @@ effects and hyb-par effects?</p>
   filter(checkOrgs(.query = list(&quot;cer&quot;, &quot;par&quot;),
                      .orgs = orgs, .excludeOthers = FALSE)) |&gt; 
   select(orgs) |&gt; pull()</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using
+## the `.groups` argument.</code></pre>
 <pre class="r"><code>map(test, \(o) {
   return(paste0(sort(unique(unlist(o)))))
 }) |&gt; unlist() |&gt; table()</code></pre>
