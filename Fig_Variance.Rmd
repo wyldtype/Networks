@@ -185,7 +185,7 @@ triodf$maxTP <- map2(triodf$gene_name, triodf$organism, \(g, o) {
     select(mean_expr, time_point_num)
   max_expr <- max(exprdf$mean_expr)
   max_tp <- exprdf$time_point_num[exprdf$mean_expr == max_expr] |>
-    reduce(.f = paste(sep = "_"))
+    purrr::reduce(.f = paste(sep = "_"))
   return(max_tp)
 }) |> unlist()
 triodf$minTP <- map2(triodf$gene_name, triodf$organism, \(g, o) {
@@ -194,7 +194,7 @@ triodf$minTP <- map2(triodf$gene_name, triodf$organism, \(g, o) {
                        gene_name == g) |> 
     select(mean_expr, time_point_num)
   min_expr <- min(exprdf$mean_expr)
-  min_tp <- exprdf$time_point_num[exprdf$mean_expr == min_expr] |> reduce(.f = paste(sep = "_"))
+  min_tp <- exprdf$time_point_num[exprdf$mean_expr == min_expr] |> purrr::reduce(.f = paste(sep = "_"))
   return(min_tp)
 }) |> unlist()
 triodf$disp <- if_else(triodf$mean != 0,

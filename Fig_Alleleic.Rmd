@@ -273,20 +273,20 @@ gene_Hyc <- plotdf |> filter((padj_cer < p_thresh) &
 gene_Hyp <- plotdf |> filter(!(padj_cer < p_thresh) & 
                                (padj_par < p_thresh) &
                                !(abs(lfc_cer) > eff_thresh) &
-                               (abs(lfc_par) > 2*eff_thresh) &
+                               (abs(lfc_par) > eff_thresh) &
                                gene_name %in% highExpressedGenes) |> 
   slice_sample(n = 1)
 gene_bothSame <- plotdf |> filter((padj_cer < p_thresh) & 
                                     (padj_par < p_thresh) &
-                                    (abs(lfc_cer) > 2*eff_thresh) &
-                                    (abs(lfc_par) > 2*eff_thresh) &
+                                    (abs(lfc_cer) > eff_thresh) &
+                                    (abs(lfc_par) > eff_thresh) &
                                     (sign(lfc_par) == sign(lfc_cer)) &
                                     gene_name %in% highExpressedGenes) |> 
   slice_sample(n = 1)
 gene_bothDifferent <- plotdf |> filter((padj_cer < p_thresh) & 
                                          (padj_par < p_thresh) &
-                                         (abs(lfc_cer) > 2*eff_thresh) &
-                                         (abs(lfc_par) > 2*eff_thresh) &
+                                         (abs(lfc_cer) > eff_thresh) &
+                                         (abs(lfc_par) > eff_thresh) &
                                          (sign(lfc_par) != sign(lfc_cer)) &
                                          gene_name %in% highExpressedGenes) |> 
   slice_sample(n = 1)
