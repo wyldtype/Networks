@@ -277,10 +277,10 @@ Network between Scer and Spar</h1>
 
 <pre class="r"><code>source(&quot;utils.R&quot;)
 sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;, &quot;ggVennDiagram&quot;, &quot;ggExtra&quot;, &quot;RColorBrewer&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##         dplyr         readr         tidyr         purrr       ggplot2 
-##          TRUE          TRUE          TRUE          TRUE          TRUE 
-##        ggpubr   matrixStats ggVennDiagram       ggExtra  RColorBrewer 
-##          TRUE          TRUE          TRUE          TRUE          TRUE</code></pre>
+<pre><code>##         dplyr         readr         tidyr         purrr       ggplot2        ggpubr   matrixStats 
+##          TRUE          TRUE          TRUE          TRUE          TRUE          TRUE          TRUE 
+## ggVennDiagram       ggExtra  RColorBrewer 
+##          TRUE          TRUE          TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)
 
 TFnames &lt;- setdiff(unique(gsub(&quot;delete&quot;, &quot;&quot;, sample_info$genotype)), &quot;WT&quot;)
@@ -382,8 +382,7 @@ classifyNitrogenResponse(.expr_vec = test_expr,
 <p>Plot to see if we visually agree with the test result:</p>
 <pre class="r"><code>plotGenesTFdel(.gene_idxs = test_gene, .tf = &quot;GCR2&quot;, .show_tfdel = FALSE,
                .normalization = &quot;none&quot;, .parents_or_hybrid = &quot;parents&quot;)</code></pre>
-<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
-## (`geom_point()`).</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range (`geom_point()`).</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 <pre class="r"><code>plotGenesTFdel(.gene_idxs = test_gene, .tf = &quot;GCR2&quot;, .show_tfdel = FALSE,
                .normalization = &quot;none&quot;, .parents_or_hybrid = &quot;hybrid&quot;)</code></pre>
@@ -609,8 +608,7 @@ filter(genedf, cer != &quot;none&quot; &amp;
          par != &quot;none&quot; &amp; 
          hyb == &quot;none&quot;) |&gt; 
   select(gene_name) |&gt; pull()</code></pre>
-<pre><code>## [1] &quot;YCL064C&quot; &quot;YDL059C&quot; &quot;YDR011W&quot; &quot;YER057C&quot; &quot;YER064C&quot; &quot;YGR060W&quot; &quot;YML034W&quot;
-## [8] &quot;YMR252C&quot;</code></pre>
+<pre><code>## [1] &quot;YCL064C&quot; &quot;YDL059C&quot; &quot;YDR011W&quot; &quot;YER057C&quot; &quot;YER064C&quot; &quot;YGR060W&quot; &quot;YML034W&quot; &quot;YMR252C&quot;</code></pre>
 <p>YCL064C = CHA1, YDL059C = RAD59, YDR011W = SNQ2, YER057C = HMF1,
 YER064C = VHR2, YGR060W = ERG25, YML034W = SRC1, YMR252C = MLO1</p>
 <p>No obvious connections, CHA1 is the only nitrogen catabolism one,
@@ -719,7 +717,7 @@ conserved_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt;
   mutate(exact_pval = formatC(exact_pval)) |&gt; 
   xtable::xtable(digits = 0)</code></pre>
 <pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
-## % Sat Jul 26 08:09:59 2025
+## % Fri Aug  8 15:35:31 2025
 ## \begin{table}[ht]
 ## \centering
 ## \begin{tabular}{rlrrl}
@@ -749,7 +747,7 @@ ScerHyb_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt;
   mutate(exact_pval = formatC(exact_pval)) |&gt; 
   xtable::xtable(digits = 0)</code></pre>
 <pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
-## % Sat Jul 26 08:09:59 2025
+## % Fri Aug  8 15:35:31 2025
 ## \begin{table}[ht]
 ## \centering
 ## \begin{tabular}{rlrrl}
@@ -776,7 +774,7 @@ Hyb_GOdf |&gt; filter(!(term %in% term_ribosome) &amp; sig) |&gt;
   mutate(exact_pval = formatC(exact_pval)) |&gt; 
   xtable::xtable(digits = 0)</code></pre>
 <pre><code>## % latex table generated in R 4.5.0 by xtable 1.8-4 package
-## % Sat Jul 26 08:09:59 2025
+## % Fri Aug  8 15:35:31 2025
 ## \begin{table}[ht]
 ## \centering
 ## \begin{tabular}{rlrrl}
@@ -935,16 +933,14 @@ Hyb, however, has much stronger cor with Spar:</p>
                                                   sample_info$genotype == &quot;GCR2delete&quot;,],
                            .show_tfdel = FALSE,
                            .normalization = &quot;log2&quot;)</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
-## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
-## override using the `.groups` argument.
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+## using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
+## `.groups` argument.
 ## Adding missing grouping variables: `time_point_str`, `genotype`
 ## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
-## the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
-## the `.groups` argument.</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
 <p>Calculating ortholog correlations:</p>
 <pre class="r"><code># cor(Scer, Spar)
@@ -1015,7 +1011,7 @@ sgd_lookup &lt;- read_delim(&quot;data_files/downloaded_genomes_and_features/SGD
   dplyr::rename(&quot;gene_name&quot;=&quot;X4&quot;,
                 &quot;common_name&quot;=&quot;X5&quot;)</code></pre>
 <pre><code>## Rows: 16454 Columns: 16
-## ── Column specification ──────────────────────────────────────────────────────
+## ── Column specification ─────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (12): X1, X2, X3, X4, X5, X6, X7, X8, X9, X12, X15, X16
 ## dbl   (3): X10, X11, X13
@@ -1050,8 +1046,7 @@ ggMarginal(p, type = &quot;densigram&quot;, margins = &quot;both&quot;)</code></
 ## ℹ The deprecated feature was likely used in the ggExtra package.
 ##   Please report the issue at &lt;https://github.com/daattali/ggExtra/issues&gt;.
 ## This warning is displayed once every 8 hours.
-## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-## generated.</code></pre>
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
 <p><img src="Fig_WT_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
 <p>For the paper figure:</p>
 <pre class="r"><code># pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/HybridDominance.pdf&quot;,
@@ -1083,7 +1078,39 @@ For the paper figure:</p>
 #     width = 6, height = 6)
 # grid::grid.draw(ggMarginal(p, type = &quot;histogram&quot;))
 # dev.off()</code></pre>
-<pre class="r"><code>save(genedf, file = &quot;data_files/GeneDataFrame.RData&quot;)</code></pre>
+<p>Same plot but just the conserved genes to see if they have the same
+pattern</p>
+<pre class="r"><code>plotdf &lt;- genedf |&gt; drop_na() |&gt;
+  left_join(y = sgd_lookup, by = &quot;gene_name&quot;) |&gt;
+  filter(cor_cer &gt; 0.8 &amp; cor_par &gt; 0.8)
+p &lt;- ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
+  stat_density_2d(aes(fill = log(..density.. + 1)), geom = &quot;raster&quot;, contour = FALSE) +
+  geom_point(data = filter(plotdf, conservation == &quot;unresponsive&quot;), aes(color = conservation), size = 0.5) +
+  geom_point(data = filter(plotdf, conservation != &quot;unresponsive&quot;), aes(color = conservation), size = 0.5) +
+  theme_classic() + 
+  theme(legend.position = &quot;none&quot;) +
+  xlab(&quot;correlation (Scer, Hyb)&quot;) +
+  ylab(&quot;correlation (Spar, Hyb)&quot;) +
+  xlim(c(0.8, 1)) +
+  ylim(c(0.8, 1)) +
+  scale_fill_distiller(palette = &quot;Spectral&quot;) +
+  scale_color_discrete(limits = conservation_colordf$limits,
+                       type = conservation_colordf$value)
+ggMarginal(p, type = &quot;histogram&quot;)</code></pre>
+<pre><code>## Warning: Removed 396 rows containing missing values or values outside the scale range
+## (`geom_raster()`).</code></pre>
+<p><img src="Fig_WT_files/figure-html/unnamed-chunk-23-1.png" width="672" />
+They somewhat do, it’s a fairly continuous decay of dominance.</p>
+<p>For the paper figure:</p>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/HybridDominancePoint8Genes.pdf&quot;,
+    width = 5, height = 5)
+grid::grid.draw(ggMarginal(p, type = &quot;histogram&quot;))</code></pre>
+<pre><code>## Warning: Removed 396 rows containing missing values or values outside the scale range
+## (`geom_raster()`).</code></pre>
+<pre class="r"><code>dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<pre class="r"><code>save(genedf, collapsed, file = &quot;data_files/GeneDataFrame.RData&quot;)</code></pre>
 </div>
 <div id="full-go-term-latex-tables-for-supplement"
 class="section level1">

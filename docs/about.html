@@ -276,10 +276,8 @@ $(document).ready(function () {
 
 <p>For testing functions:</p>
 <pre class="r"><code>sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
-<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr 
-##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE 
-## matrixStats 
-##        TRUE</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr matrixStats 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE</code></pre>
 <pre class="r"><code>load(&quot;data_files/CleanedCounts.RData&quot;)</code></pre>
 <p>Plotting functions:</p>
 <pre class="r"><code># plots WT vs TFdel in both species (option to exclude WT or TFdel)
@@ -465,18 +463,15 @@ plotExpressionProfileTFdel(.cts1 = counts[&quot;YPL015C&quot;, sample_info$organ
                            .info3 = sample_info[sample_info$organism == &quot;cer&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,],
                            .info4 = sample_info[sample_info$organism == &quot;par&quot; &amp; sample_info$genotype == &quot;TEC1delete&quot;,], 
                            .normalization = &quot;none&quot;)</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;,
-## &#39;well_flask_ID&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can
-## override using the `.groups` argument.
+<pre><code>## `summarise()` has grouped output by &#39;group_id&#39;, &#39;time_point_str&#39;, &#39;well_flask_ID&#39;. You can override
+## using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;, &#39;genotype&#39;. You can override using the
+## `.groups` argument.
 ## Adding missing grouping variables: `time_point_str`, `genotype`
 ## Adding missing grouping variables: `time_point_str`, `genotype`
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
-## the `.groups` argument.
-## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using
-## the `.groups` argument.</code></pre>
-<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
-## (`geom_point()`).</code></pre>
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.
+## `summarise()` has grouped output by &#39;time_point_str&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range (`geom_point()`).</code></pre>
 <p><img src="about_files/figure-html/plotExpressionProfileTFdel-1.png" width="672" /></p>
 <pre class="r"><code># Plots each genotype as a separate line
 plotExpressionProfileTFdels &lt;- function(.cts,
@@ -857,6 +852,39 @@ makeUpsetPlot &lt;- function(.df, .group_name, .group_members, .item_names,
 #               .group_name = &quot;organism&quot;,
 #               .group_members = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyc&quot;, &quot;hyp&quot;),
 #               .item_names = c(&quot;gene_name&quot;, &quot;deletion&quot;, &quot;effect&quot;))
+
+#Putting the skyline (bar plots that go above and below the y = 0 line) plot into a function, b/c we&#39;re going to use if a few times:
+
+plotSkyline &lt;- function(.sigdf, .title) {
+  if (&quot;lfc_sign&quot; %in% colnames(.sigdf)) {
+    .updf &lt;- .sigdf |&gt; filter(lfc_sign == 1)
+    .downdf &lt;- .sigdf |&gt; filter(lfc_sign == -1)
+  }
+  else {
+    .updf &lt;- .sigdf |&gt; filter(sign(lfc) == 1)
+    .downdf &lt;- .sigdf |&gt; filter(sign(lfc) == -1)
+  }
+  p &lt;- ggplot() +
+    geom_histogram(data = .updf, 
+                   aes(x = factor(deletion, 
+                                  levels = TFnames),
+                       y = after_stat(count),
+                       fill = deletion), stat = &quot;count&quot;) +
+    geom_histogram(data = .downdf, 
+                   aes(x = factor(deletion, 
+                                  levels = TFnames),
+                       y = -after_stat(count),
+                       fill = deletion), stat = &quot;count&quot;) +
+    geom_hline(yintercept = 0) +
+    scale_x_discrete(limits = TFnames,
+                     breaks = TFnames) +
+    theme_classic() +
+    theme(legend.position = &quot;none&quot;, axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    xlab(&quot;&quot;) +
+    ylab(&quot;number of DE genes&quot;) +
+    ggtitle(.title)
+  return(p)
+}
 
 #### Gene Ontology Enrichment ####
 getGOSlimDf &lt;- function(.idxs, .group_name, .file_prefix = &quot;gene_ontology/results/&quot;,

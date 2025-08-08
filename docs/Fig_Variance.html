@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Do TFdels tend to reduce expression variance?</title>
+
+<script src="site_libs/header-attrs-2.29/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Networks</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">Functions</a>
+</li>
+<li>
+  <a href="data_cleaning.html">Data Cleaning</a>
+</li>
+<li>
+  <a href="DESeq2.html">DESeq2</a>
+</li>
+<li>
+  <a href="Fig_WT.html">Comparing Wildtype LowN Response</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Do TFdels tend to reduce expression
+variance?</h1>
+
+</div>
+
+
+<pre class="r"><code>load(&quot;data_files/GeneDataFrame.RData&quot;)
+load(&quot;data_files/DESeq2.RData&quot;)
+source(&quot;utils.R&quot;)
+sapply(c(&quot;dplyr&quot;, &quot;readr&quot;, &quot;tidyr&quot;, &quot;purrr&quot;, &quot;ggplot2&quot;, &quot;ggpubr&quot;, &quot;matrixStats&quot;), require, character.only=TRUE)</code></pre>
+<pre><code>##       dplyr       readr       tidyr       purrr     ggplot2      ggpubr matrixStats 
+##        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE        TRUE</code></pre>
+<pre class="r"><code>p_thresh &lt;- 0.05 # because DESeq2 already corrected for FDR with alpha = 0.05
+eff_thresh &lt;- 2</code></pre>
+<div id="assigning-dominance" class="section level3">
+<h3>Assigning dominance</h3>
+<p>Because we see a stronger hybrid correlation to one parent or the
+other even when both correlations are above 0.8, we’re going to assign
+every gene a “dominant” parent by whether cor_cer or cor_par is greater.
+This might or might not be an important distinction later on, but it’s
+one we can make.</p>
+<pre class="r"><code>sum(genedf$cor_cer == genedf$cor_par, na.rm = TRUE)</code></pre>
+<pre><code>## [1] 0</code></pre>
+<pre class="r"><code>genedf$dominant &lt;- if_else(genedf$cor_cer &gt; genedf$cor_par,
+                           true = &quot;cer&quot;, false = &quot;par&quot;)
+genedf |&gt; filter(cor_cer &gt; 0.8 | cor_par &gt; 0.8) |&gt; 
+  select(dominant) |&gt; table()</code></pre>
+<pre><code>## dominant
+##  cer  par 
+## 2283 2388</code></pre>
+<p>No correlations are equal, so we don’t have to worry about ambiguous
+dominance. The incidence of Scer vs Spar dominance is pretty evenly
+split between genes..</p>
+<pre class="r"><code>genedf |&gt; filter(cor_cer &gt; 0.8 | cor_par &gt; 0.8) |&gt; 
+  select(dominant, conservation) |&gt; table()</code></pre>
+<pre><code>##         conservation
+## dominant conserved  Hyb Scer ScerHyb ScerSpar Spar SparHyb unresponsive
+##      cer       193  107   83     161        4   22      60         1653
+##      par       203  120   44     124        4   35      68         1790</code></pre>
+<p>…and conservation categories. Slight bias for Scer/ScerHyb to be
+dominant when it’s a gene that isn’t responsive in Spar and vice-versa
+for Spar/SparHyb.</p>
+<p>Now we’ll check first how often the DE gene is in the dominant
+organism</p>
+<pre class="r"><code>sigdf &lt;- TFdeldf |&gt; filter(abs(lfc) &gt; eff_thresh &amp; 
+                             padj &lt; p_thresh)
+genedf$nScer &lt;- map(genedf$gene_name, \(g) {
+  filter(sigdf, organism == &quot;cer&quot; &amp; gene_name == g) |&gt; 
+    nrow()
+}) |&gt; unlist()
+genedf$nSpar &lt;- map(genedf$gene_name, \(g) {
+  filter(sigdf, organism == &quot;par&quot; &amp; gene_name == g) |&gt; 
+    nrow()
+}) |&gt; unlist()
+genedf$nHyb &lt;- map(genedf$gene_name, \(g) {
+  filter(sigdf, organism == &quot;hyb&quot; &amp; 
+           allele == &quot;hyb&quot; &amp; gene_name == g) |&gt; 
+    nrow()
+}) |&gt; unlist()
+genedf$nHyc &lt;- map(genedf$gene_name, \(g) {
+  filter(sigdf, organism == &quot;hyb&quot; &amp; 
+           allele == &quot;cer&quot; &amp; gene_name == g) |&gt; 
+    nrow()
+}) |&gt; unlist()
+genedf$nHyp &lt;- map(genedf$gene_name, \(g) {
+  filter(sigdf, organism == &quot;hyb&quot; &amp; 
+           allele == &quot;par&quot; &amp; gene_name == g) |&gt; 
+    nrow()
+}) |&gt; unlist()</code></pre>
+<p>How many effects are in dominant versus recessive? i.e. if “cer” is
+dominant, how many are Scer/Hyc?</p>
+<pre class="r"><code>plotdf &lt;- genedf |&gt; filter(cor_cer &gt; 0.8 | cor_par &gt; 0.8 &amp;
+                             !is.na(dominant)) |&gt; 
+  select(dominant, nScer, nSpar, nHyc, nHyp, conservation) |&gt; 
+  drop_na()
+plotdf$nDomParents &lt;- if_else(plotdf$dominant == &quot;cer&quot;,
+                              true = plotdf$nScer,
+                              false = plotdf$nSpar)
+plotdf$nDomHybrid &lt;- if_else(plotdf$dominant == &quot;cer&quot;,
+                             true = plotdf$nHyc,
+                             false = plotdf$nHyp)
+plotdf$nRecParents &lt;- if_else(plotdf$dominant == &quot;cer&quot;,
+                              true = plotdf$nSpar,
+                              false = plotdf$nScer)
+plotdf$nRecHybrid &lt;- if_else(plotdf$dominant == &quot;cer&quot;,
+                             true = plotdf$nHyp,
+                             false = plotdf$nHyc)
+plotdf0 &lt;- plotdf |&gt; select(nDomParents, nDomHybrid,
+                 nRecParents, nRecHybrid) |&gt; colSums()
+plotdf0</code></pre>
+<pre><code>## nDomParents  nDomHybrid nRecParents  nRecHybrid 
+##        3234        4474        3023        4192</code></pre>
+<pre class="r"><code>1 - pbinom(q = plotdf0[&quot;nDomParents&quot;], size = plotdf0[&quot;nDomParents&quot;] +
+         plotdf0[&quot;nRecParents&quot;], prob = 0.5)</code></pre>
+<pre><code>## nDomParents 
+## 0.003677461</code></pre>
+<pre class="r"><code>1 - pbinom(q = plotdf0[&quot;nDomHybrid&quot;], size = plotdf0[&quot;nDomHybrid&quot;] +
+         plotdf0[&quot;nRecHybrid&quot;], prob = 0.5)</code></pre>
+<pre><code>##  nDomHybrid 
+## 0.001181848</code></pre>
+<p>Is this more or less apparent in the LowN responsive genes?</p>
+<pre class="r"><code>plotdf0 &lt;- plotdf |&gt; filter(conservation != &quot;unresponsive&quot;) |&gt; 
+  select(nDomParents, nDomHybrid,
+                 nRecParents, nRecHybrid) |&gt; colSums()
+plotdf0</code></pre>
+<pre><code>## nDomParents  nDomHybrid nRecParents  nRecHybrid 
+##        1257        1904        1203        1722</code></pre>
+<p>About the same.</p>
+</div>
+<div id="direction" class="section level2">
+<h2>Direction</h2>
+<p>Does one gene that has multiple effects tend to have fold changes
+from all effects in the same direction?</p>
+<pre class="r"><code>plotdf &lt;- sigdf |&gt; filter(organism == allele) |&gt; 
+  group_by(gene_name, organism, allele) |&gt; 
+  summarise(nUp = sum(sign(lfc) == 1),
+            nDown = sum(sign(lfc) == -1))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;organism&#39;. You can override using the `.groups`
+## argument.</code></pre>
+<pre class="r"><code>p_down &lt;- ggplot(plotdf, aes(x = factor(nUp + nDown), y = nDown)) +
+  geom_boxplot(aes(color = organism)) +
+  geom_abline(slope = 0.5, intercept = 0) +
+  geom_abline(slope = 1, intercept = 0, color = &quot;gold&quot;) +
+  theme_classic() +
+  theme(legend.position = &quot;none&quot;) +
+  scale_color_discrete(limits = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                       type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+                                 conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+                                 conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;])) +
+  facet_wrap(~factor(organism, levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) +
+  xlab(&quot;number of TF knockout effects per gene&quot;)
+p_down</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<pre class="r"><code>p_up &lt;- ggplot(plotdf, aes(x = factor(nUp + nDown), y = nUp)) +
+  geom_boxplot(aes(color = organism)) +
+  geom_abline(slope = 0.5, intercept = 0) +
+  geom_abline(slope = 1, intercept = 0, color = &quot;gold&quot;) +
+  theme_classic() +
+  theme(legend.position = &quot;none&quot;) +
+  scale_color_discrete(limits = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                       type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+                                 conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+                                 conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;])) +
+  facet_wrap(~factor(organism, levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) +
+  xlab(&quot;number of TF knockout effects per gene&quot;)
+p_up</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-8-1.png" width="672" />
+Yes when they’re negative effects, no when they’re positive.</p>
+<p>for the paper</p>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/sameDirectionBoxplots.pdf&quot;, width = 12, height = 4)
+ggarrange(p_up, p_down, nrow = 2, ncol = 1)
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+</div>
+<div id="variance" class="section level2">
+<h2>Variance</h2>
+<p>Answering two questions about variance: 1) Is the species (Scer,
+Spar, or Hyb) where the gene is more variable also more likely to have
+effect(s)? 2) Is the timepoint where the gene is affected likely to be
+the highest or lowest timepoint and if so, does the direction of affect
+go towards the mean expression?</p>
+<p>Both of these questions require us to collect 3 new columns for each
+organism: var, minTP, and maxTP, using collapsed. Easier to make a new
+df where there’s one row for each gene in each of the three yeasts:</p>
+<pre class="r"><code>triodf &lt;- expand_grid(gene_name = genedf$gene_name,
+                      organism = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;))
+triodf$var&lt;- map2(triodf$gene_name, triodf$organism, \(g, o) {
+  expr_vec &lt;- filter(collapsed, organism == o &amp; 
+                       allele == o &amp;
+                       gene_name == g) |&gt; 
+    select(mean_expr) |&gt; pull()
+  return(var(expr_vec))
+}) |&gt; unlist()
+triodf$mean &lt;- map2(triodf$gene_name, triodf$organism, \(g, o) {
+  expr_vec &lt;- filter(collapsed, organism == o &amp; 
+                       allele == o &amp;
+                       gene_name == g) |&gt; 
+    select(mean_expr) |&gt; pull()
+  return(mean(expr_vec))
+}) |&gt; unlist()
+triodf$maxTP &lt;- map2(triodf$gene_name, triodf$organism, \(g, o) {
+  exprdf &lt;- filter(collapsed, organism == o &amp;  
+                       allele == o &amp;
+                       gene_name == g) |&gt; 
+    select(mean_expr, time_point_num)
+  max_expr &lt;- max(exprdf$mean_expr)
+  max_tp &lt;- exprdf$time_point_num[exprdf$mean_expr == max_expr] |&gt;
+    purrr::reduce(.f = paste(sep = &quot;_&quot;))
+  return(max_tp)
+}) |&gt; unlist()
+triodf$minTP &lt;- map2(triodf$gene_name, triodf$organism, \(g, o) {
+  exprdf &lt;- filter(collapsed, organism == o &amp;  
+                       allele == o &amp;
+                       gene_name == g) |&gt; 
+    select(mean_expr, time_point_num)
+  min_expr &lt;- min(exprdf$mean_expr)
+  min_tp &lt;- exprdf$time_point_num[exprdf$mean_expr == min_expr] |&gt; purrr::reduce(.f = paste(sep = &quot;_&quot;))
+  return(min_tp)
+}) |&gt; unlist()
+triodf$disp &lt;- if_else(triodf$mean != 0,
+                       true = triodf$var/triodf$mean,
+                       false = triodf$var)</code></pre>
+<div
+id="q1-is-the-species-scer-spar-or-hyb-where-the-gene-is-more-variable-also-more-likely-to-have-effects"
+class="section level3">
+<h3>Q1) Is the species (Scer, Spar, or Hyb) where the gene is more
+variable also more likely to have effect(s)?</h3>
+<pre class="r"><code>plotdf &lt;- triodf |&gt; select(gene_name, organism, disp) |&gt; 
+  pivot_wider(id_cols = &quot;gene_name&quot;,
+              names_from = &quot;organism&quot;,
+              values_from = &quot;disp&quot;,
+              names_prefix = &quot;disp_&quot;) |&gt; 
+  left_join(y = select(genedf, gene_name, nScer, nSpar),
+            by = &quot;gene_name&quot;)
+plotdf$higherDisp &lt;- if_else(plotdf$disp_cer &gt; plotdf$disp_par,
+                            true = &quot;cer&quot;, false = &quot;par&quot;)
+plotdf$nHigher &lt;- if_else(plotdf$higherDisp == &quot;cer&quot;,
+                          true = plotdf$nScer, false = plotdf$nSpar)
+plotdf$nLower &lt;- if_else(plotdf$higherDisp == &quot;cer&quot;,
+                         true = plotdf$nSpar, false = plotdf$nScer)
+plotdf |&gt; select(nHigher, nLower) |&gt; colSums()</code></pre>
+<pre><code>## nHigher  nLower 
+##    3827    3168</code></pre>
+<p>Slightly more from the higher variance gene, but not much.</p>
+</div>
+<div
+id="q2-is-the-timepoint-where-the-gene-is-affected-likely-to-be-the-highest-or-lowest-timepoint-and-if-so-does-the-direction-of-affect-go-towards-the-mean-expression"
+class="section level3">
+<h3>Q2) Is the timepoint where the gene is affected likely to be the
+highest or lowest timepoint and if so, does the direction of affect go
+towards the mean expression?</h3>
+<p>Boxplot of three categories of effect: maxTP, minTP, midTP (not max
+or midTP) with the y-axis being the corresponding lfc, faceted by
+organism</p>
+<pre class="r"><code>plotdf &lt;- left_join(x = filter(sigdf, organism == allele),
+                    y = triodf,
+                    by = c(&quot;gene_name&quot;, &quot;organism&quot;))
+plotdf$maxTP &lt;- map(plotdf$maxTP, \(tp) {
+  if (tp == 0) {
+    return(&quot;TP1&quot;)
+  }
+  if (tp == 60) {
+    return(&quot;TP2&quot;)
+  }
+  if (tp == 960) {
+    return(&quot;TP3&quot;)
+  }
+}) |&gt; unlist()
+plotdf$minTP &lt;- map(plotdf$minTP, \(tp) {
+  if (tp == 0) {
+    return(&quot;TP1&quot;)
+  }
+  if (tp == 60) {
+    return(&quot;TP2&quot;)
+  }
+  if (tp == 960) {
+    return(&quot;TP3&quot;)
+  }
+}) |&gt; unlist()
+plotdf$tp &lt;- map(c(1:nrow(plotdf)), \(i) {
+  maxtp &lt;- plotdf$maxTP[i]
+  mintp &lt;- plotdf$minTP[i]
+  tp &lt;- plotdf$timepoint[i]
+  if (tp == maxtp) {
+    return(&quot;max&quot;)
+  }
+  if (tp == mintp) {
+    return(&quot;min&quot;)
+  }
+  else {
+    return(&quot;mid&quot;)
+  }
+}) |&gt; unlist()
+countdf &lt;- plotdf |&gt; group_by(tp, organism) |&gt; 
+  summarise(n = n())</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the `.groups` argument.</code></pre>
+<pre class="r"><code>p &lt;- ggplot(plotdf, 
+       aes(x = factor(tp, levels = c(&quot;min&quot;, &quot;mid&quot;, &quot;max&quot;)), 
+           y = lfc)) +
+  geom_violin(aes(fill = organism)) +
+  scale_fill_discrete(limits = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                      type = c(conservation_colordf$value[conservation_colordf$limits == &quot;Scer&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Spar&quot;],
+                               conservation_colordf$value[conservation_colordf$limits == &quot;Hyb&quot;])) +
+  geom_text(data = countdf, 
+            aes(y = 10, x = tp, label = n)) +
+  facet_wrap(~factor(organism, levels = c(&quot;cer&quot;, &quot;par&quot;, &quot;hyb&quot;),
+                     labels = c(&quot;Scer&quot;, &quot;Spar&quot;, &quot;Hyb&quot;))) +
+  geom_hline(yintercept = 0) +
+  theme_classic() +
+  xlab(&quot;expression level at affected timepoint\n(relative to other timepoints)&quot;) +
+  ylab(&quot;Log2 fold change in TF deletion vs WT&quot;) +
+  theme(legend.position = &quot;none&quot;)
+p</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>For paper figure:</p>
+<pre class="r"><code>pdf(&quot;../Umich_Dissertation/chapters/figures/Networks/varianceViolins.pdf&quot;, width = 5, height = 3)
+p
+dev.off()</code></pre>
+<pre><code>## quartz_off_screen 
+##                 2</code></pre>
+<p>What about just the LowN responsive genes?</p>
+<pre class="r"><code>lowN_responsive_genes &lt;- genedf |&gt; 
+  filter(!is_conserved_unresponsive) |&gt; 
+  select(gene_name) |&gt; pull()
+countdf &lt;- plotdf |&gt; filter(gene_name %in% lowN_responsive_genes) |&gt; 
+  group_by(tp, organism) |&gt; 
+  summarise(n = n())</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;tp&#39;. You can override using the `.groups` argument.</code></pre>
+<pre class="r"><code>p &lt;- ggplot(filter(plotdf, gene_name %in% lowN_responsive_genes), 
+       aes(x = factor(tp, levels = c(&quot;min&quot;, &quot;mid&quot;, &quot;max&quot;)), 
+           y = lfc)) +
+  geom_violin(aes(fill = organism)) +
+  geom_text(data = countdf, 
+            aes(y = 10, x = tp, label = n)) +
+  facet_wrap(~organism) +
+  geom_hline(yintercept = 0) +
+  theme_classic() +
+  xlab(&quot;expression level at affected timepoint\n(relative to other timepoints)&quot;) +
+  ylab(&quot;Log2 fold change in TF deletion vs WT&quot;)
+p</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>Similar proportions. Spar doesn’t have quite as much bias towards
+-lfc at mid TP effects.</p>
+</div>
+<div
+id="q3-do-tfdel-lines-tend-to-have-reduced-variation-across-timepoints-compared-to-wt-need-to-create-collapsed_tfdel-for-this."
+class="section level3">
+<h3>Q3) Do TFdel lines tend to have reduced variation across timepoints
+compared to WT? Need to create collapsed_TFdel for this.</h3>
+<p>I could just lump all the TFdel samples into one category and compare
+it to WT. To do this I would want to first check if different TFdels
+tended to affect the same gene in the same way (i.e. same direction and
+same timepoint), which would be quite interesting.</p>
+<pre class="r"><code># TODO: This might be a more intuitive way to create a plot that shows reduction in variation for the paper. But for now I&#39;m using the above violin plots and calling it a day.</code></pre>
+</div>
+</div>
+<div id="genes-with-higher-parental-correlation-have-more-tfdel-effects"
+class="section level2">
+<h2>Genes with higher parental correlation have more TFdel effects</h2>
+<p>Most TF effects are in conserved genes, true for every knockout with
+significant numbers of effects:</p>
+<pre class="r"><code>plotdf &lt;- sigdf |&gt; 
+  filter(abs(lfc) &gt; 1) |&gt; 
+  left_join(select(genedf, gene_name, cor_parents),
+            by = &quot;gene_name&quot;) |&gt; 
+  mutate(plasticity = if_else(cor_parents &gt; 0.8,
+                              true = &quot;conserved&quot;,
+                              false = &quot;diverged&quot;)) |&gt; 
+  group_by(gene_name, deletion, plasticity) |&gt; 
+  summarise(n = n()) |&gt; 
+  drop_na()</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;, &#39;deletion&#39;. You can override using the `.groups`
+## argument.</code></pre>
+<pre class="r"><code>ggplot(plotdf, aes(x = plasticity, y = n)) +
+  geom_bar(aes(fill = deletion), stat = &quot;identity&quot;) +
+  facet_wrap(~deletion, nrow = 4) +
+  theme_classic() +
+  theme(legend.position = &quot;none&quot;, 
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  xlab(&quot;plasticity&quot;) +
+  ylab(&quot;number of DE genes \n(TF deletion vs. WT)&quot;)</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>But there are more conserved than diverged genes, is this just
+reflecting that bias?</p>
+<pre class="r"><code>plotdf0 &lt;- plotdf |&gt; group_by(plasticity) |&gt; 
+  summarise(n = sum(n))
+countdf &lt;- plotdf |&gt; ungroup() |&gt; 
+  select(gene_name, plasticity) |&gt;
+  unique() |&gt; 
+  group_by(plasticity) |&gt; 
+  summarise(nGroup = n())
+plotdf0 &lt;- left_join(plotdf0, countdf, by = &quot;plasticity&quot;) |&gt; 
+  pivot_longer(cols = c(&quot;n&quot;, &quot;nGroup&quot;))
+countdf &lt;- plotdf0 |&gt; group_by(name) |&gt; summarise(nBars = sum(value))
+plotdf0 &lt;- left_join(plotdf0, countdf, by = &quot;name&quot;)
+p &lt;- ggplot(plotdf0, aes(x = name, y = value/nBars)) +
+  geom_bar(aes(fill = plasticity), 
+           position = &quot;stack&quot;, 
+           stat = &quot;identity&quot;) +
+  theme_classic() +
+  scale_x_discrete(limits = c(&quot;n&quot;, &quot;nGroup&quot;),
+                   labels = c(&quot;fractionOfTFEffects&quot;,
+                              &quot;fractionOfGenes&quot;)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+p</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>Conserved still have a disproportionately higher fraction of TF
+effects.</p>
+<p>But conserved might have higher mean expression than diverged, and
+higher mean expression is more likely to have TF effects—What if we bin
+by mean expression level:</p>
+<pre class="r"><code>plotdf &lt;- sigdf |&gt; 
+  left_join(select(genedf, gene_name, cor_parents),
+            by = &quot;gene_name&quot;) |&gt; 
+  group_by(gene_name, cor_parents) |&gt; 
+  summarise(nDE = n()) |&gt; 
+  drop_na() |&gt; 
+  mutate(plasticity = if_else(cor_parents &gt; 0.8,
+                              true = &quot;conserved&quot;,
+                              false = &quot;diverged&quot;))</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;gene_name&#39;. You can override using the `.groups` argument.</code></pre>
+<pre class="r"><code>meanexprdf &lt;- collapsed |&gt; 
+  group_by(gene_name) |&gt; 
+  summarise(expr_level = mean(mean_expr, na.rm = TRUE))
+
+plotdf &lt;- left_join(plotdf, meanexprdf, by = &quot;gene_name&quot;)
+plotdf$exprbins &lt;- cut_number(plotdf$expr_level, n = 5)
+
+ggplot(plotdf, aes(x = interaction(plasticity, exprbins), y = nDE)) +
+  geom_boxplot(aes(color = plasticity)) +
+  theme(axis.text.x = element_blank())</code></pre>
+<p><img src="Fig_Variance_files/figure-html/unnamed-chunk-17-1.png" width="672" />
+In the very lowest expression bin, both conserved and diverged have very
+few effects. But in all other bins, conserved genes have more TF effects
+than diverged.</p>
+</div>
+<div id="probably-archive-scaling-mean-expression"
+class="section level2">
+<h2>Probably archive: Scaling mean expression</h2>
+<p>Scaling collapsed (keeping in case it’s useful):</p>
+<pre class="r"><code>scaledf &lt;- collapsed |&gt; 
+  group_by(gene_name, organism, allele) |&gt; 
+  reframe(scaling_mean = mean(mean_expr),
+          scaling_scale = sd(mean_expr),
+          mean_expr = mean_expr,
+          time_point_num = time_point_num) |&gt; 
+  ungroup()
+scaledf$scaled_expr &lt;- (scaledf$mean_expr - scaledf$scaling_mean)/scaledf$scaling_scale
+collapsed &lt;- left_join(x = collapsed, 
+                       y = select(scaledf, gene_name, organism, 
+                                  allele, time_point_num, scaled_expr), 
+                       by = c(&quot;gene_name&quot;, &quot;organism&quot;, 
+                              &quot;allele&quot;, &quot;time_point_num&quot;))</code></pre>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

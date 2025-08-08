@@ -12,4 +12,10 @@ navbar:
       href: DESeq2.html
     - text: "Comparing Wildtype LowN Response"
       href: Fig_WT.html
+    - text: "Effects of transcription factor deletions"
+      href: Fig_TFdel.html
+    - text: "Hybrid alleleic expression"
+      href: Fig_Allelic.html
+    - text: "TF deletions reduce expression variation"
+      href: Fig_Variance.html
 output_dir: "docs"
