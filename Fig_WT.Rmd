@@ -760,7 +760,7 @@ p <- ggplot(plotdf, aes(x = cor_cer, y = cor_par)) +
                        type = conservation_colordf$value)
 ggMarginal(p, type = "histogram")
 ```
-The somewhat do!
+They somewhat do, it's a fairly continuous decay of dominance.
 
 For the paper figure:
 ```{r figure_hybridDominancePoint8Genes}
@@ -771,7 +771,7 @@ dev.off()
 ```
 
 ```{r saving}
-save(genedf, file = "data_files/GeneDataFrame.RData")
+save(genedf, collapsed, file = "data_files/GeneDataFrame.RData")
 ```
 
 # Full GO term Latex tables for supplement

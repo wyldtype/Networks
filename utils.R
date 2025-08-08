@@ -592,3 +592,34 @@ getGOSlimDf <- function(.idxs, .group_name, .file_prefix = "gene_ontology/",
             col_names = TRUE)
   return(testdf)
 }
+
+plotSkyline <- function(.sigdf, .title) {
+  if ("lfc_sign" %in% colnames(.sigdf)) {
+    .updf <- .sigdf |> filter(lfc_sign == 1)
+    .downdf <- .sigdf |> filter(lfc_sign == -1)
+  }
+  else {
+    .updf <- .sigdf |> filter(sign(lfc) == 1)
+    .downdf <- .sigdf |> filter(sign(lfc) == -1)
+  }
+  p <- ggplot() +
+    geom_histogram(data = .updf, 
+                   aes(x = factor(deletion, 
+                                  levels = TFnames),
+                       y = after_stat(count),
+                       fill = deletion), stat = "count") +
+    geom_histogram(data = .downdf, 
+                   aes(x = factor(deletion, 
+                                  levels = TFnames),
+                       y = -after_stat(count),
+                       fill = deletion), stat = "count") +
+    geom_hline(yintercept = 0) +
+    scale_x_discrete(limits = TFnames,
+                     breaks = TFnames) +
+    theme_classic() +
+    theme(legend.position = "none", axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+    xlab("") +
+    ylab("number of DE genes") +
+    ggtitle(.title)
+  return(p)
+}
